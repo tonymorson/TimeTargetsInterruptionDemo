@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import UIKit
 
-public final class Form<V>: UITableViewController {
+open class Form<V>: UITableViewController {
   private var cancellables: Set<AnyCancellable> = []
   private var content: (AnyPublisher<V, Never>, V) -> [FormSection]
   private var cells: [UITableViewCell] = []
@@ -46,7 +46,7 @@ public final class Form<V>: UITableViewController {
   }
 
   @available(*, unavailable)
-  required init?(coder _: NSCoder) {
+  public required init?(coder _: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
 
