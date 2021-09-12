@@ -4,7 +4,7 @@ import UIKit
 
 public final class Form<V>: UITableViewController {
   private var cancellables: Set<AnyCancellable> = []
-  private var content: (V) -> [FormSection]
+  private var content: (AnyPublisher<V, Never>, V) -> [FormSection]
   private var cells: [UITableViewCell] = []
   private var dataSource: ValueFormDiffableDataSource!
   private var onDismiss: () -> Void = {}
@@ -14,7 +14,7 @@ public final class Form<V>: UITableViewController {
     onDismiss()
   }
 
-  public init(userData: AnyPublisher<V, Never>, @FormSectionsBuilder content: @escaping (V) -> [FormSection]) {
+  public init(userData: AnyPublisher<V, Never>, @FormSectionsBuilder content: @escaping (AnyPublisher<V, Never>, V) -> [FormSection]) {
     self.content = content
     self.userData = userData
 
@@ -31,11 +31,11 @@ public final class Form<V>: UITableViewController {
     userData.sink { [weak self] value in
       guard let self = self else { return }
 
-      self.cells = self.content(value).flatMap { $0.content() }
+      self.cells = self.content(self.userData, value).flatMap { $0.content() }
 
       var snapshot = NSDiffableDataSourceSnapshot<FormSection, String>()
-      snapshot.appendSections(self.content(value))
-      for section in self.content(value) {
+      snapshot.appendSections(self.content(self.userData, value))
+      for section in self.content(self.userData, value) {
         let identifiers = section.content().compactMap(\.reuseIdentifier)
         snapshot.appendItems(identifiers, toSection: section)
       }
