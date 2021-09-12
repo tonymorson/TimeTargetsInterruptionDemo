@@ -177,6 +177,7 @@ public enum MenuItemsBuilder {
 }
 
 public extension UINavigationController {
+  @discardableResult
   func setPrefersLargeTitle(_ large: Bool) -> Self {
     navigationBar.prefersLargeTitles = large
 
