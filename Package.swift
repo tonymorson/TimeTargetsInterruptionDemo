@@ -18,6 +18,10 @@ let package = Package(
       name: "NotificationSettingsEditor",
       targets: ["NotificationSettingsEditor"]
     ),
+    .library(
+      name: "SettingsEditor",
+      targets: ["SettingsEditor"]
+    ),
   ],
 
   dependencies: [
@@ -34,6 +38,10 @@ let package = Package(
     .target(
       name: "NotificationSettingsEditor",
       dependencies: ["SwiftUIKit"]
+    ),
+    .target(
+      name: "SettingsEditor",
+      dependencies: ["NotificationSettingsEditor"]
     ),
   ]
 )
