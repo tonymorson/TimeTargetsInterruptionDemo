@@ -47,6 +47,42 @@ public enum SettingsEditorAction: Equatable {
   case notification(NotificationSettingsEditorAction)
 }
 
+public struct SettingsEditorEnvironment {
+  public init() {}
+}
+
+public func settingsEditorReducer(state: inout SettingsEditorState,
+                                  action: SettingsEditorAction,
+                                  environment _: SettingsEditorEnvironment)
+{
+  switch action {
+  case let .workDurationTapped(value):
+    state.schedule.periodDuration = value
+  case let .shortBreakDurationTapped(value):
+    state.schedule.shortBreakDuration = value
+  case let .longBreakDurationTapped(value):
+    state.schedule.longBreakDuration = value
+  case let .longBreaksFrequencyTapped(value):
+    state.schedule.longBreakFrequency = value
+  case let .dailyTargetTapped(value):
+    state.schedule.dailyTarget = value
+  case let .pauseBeforeWorkPeriodTapped(value):
+    state.schedule.pauseBeforeStartingWorkPeriods = value
+  case let .pauseBeforeBreakTapped(value):
+    state.schedule.pauseBeforeStartingBreaks = value
+  case let .resetWorkPeriodOnStopTapped(value):
+    state.schedule.resetWorkPeriodOnStop = value
+  case let .themeTapped(value):
+    state.appearance = value
+  case let .neverSleepTapped(value):
+    state.neverSleep = value
+  case let .notification(action):
+    notificationSettingsEditorReducer(state: &state.notifications,
+                                      action: action,
+                                      environment: NotificationSettingsEditorEnvironment())
+  }
+}
+
 public func SettingsEditor(settings: AnyPublisher<SettingsEditorState, Never>,
                            callback: @escaping (SettingsEditorAction) -> Void) -> UINavigationController
 {
