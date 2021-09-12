@@ -16,8 +16,6 @@
 		418F9A2026ECB39B0005624B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 418F9A1E26ECB39B0005624B /* LaunchScreen.storyboard */; };
 		4198973126EE0996008CB625 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4198973026EE0996008CB625 /* AppDelegate.swift */; };
 		4198973326EE0996008CB625 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4198973226EE0996008CB625 /* SceneDelegate.swift */; };
-		4198973526EE0996008CB625 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4198973426EE0996008CB625 /* ViewController.swift */; };
-		4198973A26EE099A008CB625 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4198973926EE099A008CB625 /* Assets.xcassets */; };
 		4198973D26EE099A008CB625 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4198973B26EE099A008CB625 /* LaunchScreen.storyboard */; };
 		4198974326EE0A61008CB625 /* NotificationSettingsEditor in Frameworks */ = {isa = PBXBuildFile; productRef = 4198974226EE0A61008CB625 /* NotificationSettingsEditor */; };
 /* End PBXBuildFile section */
@@ -34,8 +32,6 @@
 		4198972E26EE0996008CB625 /* NotificationSettingsEditorPreview.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NotificationSettingsEditorPreview.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4198973026EE0996008CB625 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		4198973226EE0996008CB625 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		4198973426EE0996008CB625 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
-		4198973926EE099A008CB625 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4198973C26EE099A008CB625 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		4198973E26EE099A008CB625 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -67,11 +63,19 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		416F64F226EE11E5000DF69C /* Previews */ = {
+			isa = PBXGroup;
+			children = (
+				4198972F26EE0996008CB625 /* NotificationSettingsEditorPreview */,
+			);
+			path = Previews;
+			sourceTree = "<group>";
+		};
 		418F99ED26ECB3830005624B = {
 			isa = PBXGroup;
 			children = (
 				418F9A1226ECB39A0005624B /* iOS */,
-				4198972F26EE0996008CB625 /* NotificationSettingsEditorPreview */,
+				416F64F226EE11E5000DF69C /* Previews */,
 				418F99F726ECB3830005624B /* Products */,
 				4117DBFB26ECB59100DE4AEA /* Frameworks */,
 			);
@@ -105,8 +109,6 @@
 			children = (
 				4198973026EE0996008CB625 /* AppDelegate.swift */,
 				4198973226EE0996008CB625 /* SceneDelegate.swift */,
-				4198973426EE0996008CB625 /* ViewController.swift */,
-				4198973926EE099A008CB625 /* Assets.xcassets */,
 				4198973B26EE099A008CB625 /* LaunchScreen.storyboard */,
 				4198973E26EE099A008CB625 /* Info.plist */,
 			);
@@ -208,7 +210,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				4198973D26EE099A008CB625 /* LaunchScreen.storyboard in Resources */,
-				4198973A26EE099A008CB625 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -229,7 +230,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4198973526EE0996008CB625 /* ViewController.swift in Sources */,
 				4198973126EE0996008CB625 /* AppDelegate.swift in Sources */,
 				4198973326EE0996008CB625 /* SceneDelegate.swift in Sources */,
 			);
@@ -429,7 +429,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = F3Q5VERFTA;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = NotificationSettingsEditorPreview/Info.plist;
+				INFOPLIST_FILE = Previews/NotificationSettingsEditorPreview/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -457,7 +457,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = F3Q5VERFTA;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = NotificationSettingsEditorPreview/Info.plist;
+				INFOPLIST_FILE = Previews/NotificationSettingsEditorPreview/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
