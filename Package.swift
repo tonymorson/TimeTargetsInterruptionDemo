@@ -11,16 +11,20 @@ let package = Package(
   products: [
     // Products define the executables and libraries a package produces, and make them visible to other packages.
     .library(
-      name: "SwiftUIKit",
-      targets: ["SwiftUIKit"]
-    ),
-    .library(
       name: "NotificationSettingsEditor",
       targets: ["NotificationSettingsEditor"]
     ),
     .library(
+      name: "RingsView",
+      targets: ["RingsView"]
+    ),
+    .library(
       name: "SettingsEditor",
       targets: ["SettingsEditor"]
+    ),
+    .library(
+      name: "SwiftUIKit",
+      targets: ["SwiftUIKit"]
     ),
   ],
 
@@ -32,16 +36,20 @@ let package = Package(
     // Targets are the basic building blocks of a package. A target can define a module or a test suite.
     // Targets can depend on other targets in this package, and on products in packages this package depends on.
     .target(
-      name: "SwiftUIKit",
-      dependencies: []
+      name: "NotificationSettingsEditor",
+      dependencies: ["SwiftUIKit"]
     ),
     .target(
-      name: "NotificationSettingsEditor",
+      name: "RingsView",
       dependencies: ["SwiftUIKit"]
     ),
     .target(
       name: "SettingsEditor",
       dependencies: ["NotificationSettingsEditor"]
+    ),
+    .target(
+      name: "SwiftUIKit",
+      dependencies: []
     ),
   ]
 )
