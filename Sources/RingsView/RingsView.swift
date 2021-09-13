@@ -1,14 +1,14 @@
 import Foundation
 import UIKit
 
-public enum RingSemantic: Int { case period, session, target }
-
-public struct RingsState: Equatable {
+public struct RingsViewState: Equatable {
   public var arrangement: RingsLayout
   public var content: RingsData
 }
 
-public enum RingsAction: Equatable {
+public enum RingSemantic: Int { case period, session, target }
+
+public enum RingsViewAction: Equatable {
   case acentricRingsPinched(scaleFactor: CGFloat)
   case concentricRingsPinched(scaleFactor: CGFloat)
   case concentricRingsTappedInColoredBandsArea
@@ -16,13 +16,67 @@ public enum RingsAction: Equatable {
   case ringsTapped(RingSemantic?)
 }
 
-public struct RingsEnvironment {}
+public func ringsViewReducer(state: inout RingsViewState, action: RingsViewAction, environment _: RingsViewEnvironment) {
+  switch action {
+  case let .acentricRingsPinched(scaleFactor: scaleFactor):
+    state.arrangement.scaleFactorWhenFullyAcentric = scaleFactor
+
+  case let .concentricRingsPinched(scaleFactor: scaleFactor):
+    state.arrangement.scaleFactorWhenFullyConcentric = scaleFactor
+
+  case .concentricRingsTappedInColoredBandsArea:
+    switch state.arrangement.focus {
+    case .period: state.arrangement.focus = .session
+    case .session: state.arrangement.focus = .target
+    case .target: state.arrangement.focus = .period
+    }
+
+  case let .ringConcentricityDragged(newValue):
+    state.arrangement.concentricity = newValue
+
+  case .ringsTapped(.some):
+    if state.content.period.color == .systemGray2 || state.content.period.color == .lightGray {
+      state.content.period.color = .systemRed
+      state.content.session.color = .systemGreen
+      state.content.target.color = .systemYellow
+
+      state.content.period.trackColor = .systemGray4
+      state.content.session.trackColor = .systemGray4
+      state.content.target.trackColor = .systemGray4
+
+    } else {
+      state.content.period.color = .systemGray2
+      state.content.session.color = .systemGray2
+      state.content.target.color = .systemGray2
+
+      state.content.period.trackColor = UIColor.systemGray5
+      state.content.session.trackColor = .systemGray5
+      state.content.target.trackColor = .systemGray5
+
+      //      state.data.period.color = .lightGray
+      //      state.data.session.color = .lightGray
+      //      state.data.target.color = .lightGray
+      //
+      //
+      //      state.data.period.trackColor = UIColor.systemGray3
+      //      state.data.session.trackColor = .systemGray3
+      //      state.data.target.trackColor = .systemGray3
+    }
+
+  case .ringsTapped(.none):
+    break
+  }
+}
+
+public struct RingsViewEnvironment {
+  public init() {}
+}
 
 public final class RingsView: UIView {
-  public var callback: (RingsView, RingsAction) -> Void = { _, _ in }
+  public var callback: (RingsView, RingsViewAction) -> Void
 
-  public var rings = RingsState() {
-    didSet { update(from: oldValue, to: rings) }
+  public var state = RingsViewState() {
+    didSet { update(from: oldValue, to: state) }
   }
 
   private let periodTrack = RingView(frame: .zero)
@@ -38,7 +92,7 @@ public final class RingsView: UIView {
 
   private enum Direction { case vertical, horizontal }
   private var layoutDirection: Direction {
-    switch rings.arrangement.acentricAxis {
+    switch state.arrangement.acentricAxis {
     case .alwaysVertical: return .vertical
     case .alwaysHorizontal: return .horizontal
     case .alongLongestDimension where isPortrait: return .vertical
@@ -61,20 +115,27 @@ public final class RingsView: UIView {
     }
   }
 
-  override public init(frame: CGRect) {
-    super.init(frame: frame)
+  public init(callback: @escaping (RingsView, RingsViewAction) -> Void) {
+    self.callback = callback
+
+    super.init(frame: .zero)
+
     setup()
   }
 
-  public required init?(coder: NSCoder) {
-    super.init(coder: coder)
-    setup()
+  override init(frame _: CGRect) {
+    fatalError()
+  }
+
+  @available(*, unavailable)
+  required init?(coder _: NSCoder) {
+    fatalError()
   }
 
   override public func layoutSubviews() {
     super.layoutSubviews()
 
-    apply(concentricLayout: ConcentricLayout(bounds: bounds, settings: rings.arrangement))
+    apply(concentricLayout: ConcentricLayout(bounds: bounds, settings: state.arrangement))
   }
 
   private let pan = UIPanGestureRecognizer()
@@ -115,10 +176,10 @@ public final class RingsView: UIView {
 
     backgroundColor = .systemBackground
 
-    updateRing(details: rings.content)
+    updateRing(details: state.content)
   }
 
-  private func update(from: RingsState, to: RingsState) {
+  private func update(from: RingsViewState, to: RingsViewState) {
     if from.content != to.content {
       updateRing(details: to.content)
     }
@@ -166,7 +227,7 @@ public final class RingsView: UIView {
 //    focus.layer.shadowRadius = shadowRadius * 5
 //    focus.layer.shadowOpacity = 0.95
 
-    switch rings.arrangement.focus {
+    switch state.arrangement.focus {
     case .period:
       focus.text.content.subtitle = period.text.content.subtitle
     case .session:
@@ -208,7 +269,7 @@ public final class RingsView: UIView {
       }
 
       if distance < focusInnerRadius {
-        switch rings.arrangement.focus {
+        switch state.arrangement.focus {
         case .period: return .period
         case .session: return .period
         case .target: return .target
@@ -248,15 +309,15 @@ public final class RingsView: UIView {
   @objc private func onPinch(gesture: UIPinchGestureRecognizer) {
     switch gesture.state {
     case .began:
-      savedConcentricKeyPath = rings.arrangement.concentricity == 0.0
+      savedConcentricKeyPath = state.arrangement.concentricity == 0.0
         ? \RingsLayout.scaleFactorWhenFullyConcentric
         : \RingsLayout.scaleFactorWhenFullyAcentric
 
-      savedRingScaleFactor = rings.arrangement[keyPath: savedConcentricKeyPath]
+      savedRingScaleFactor = state.arrangement[keyPath: savedConcentricKeyPath]
 
       let newValue = constrainMinPinchingValueIfNeeded(value: gesture.scale * savedRingScaleFactor)
 
-      if rings.arrangement.concentricity == 0.0 {
+      if state.arrangement.concentricity == 0.0 {
         callback(self, .concentricRingsPinched(scaleFactor: newValue))
       } else {
         callback(self, .acentricRingsPinched(scaleFactor: newValue))
@@ -265,7 +326,7 @@ public final class RingsView: UIView {
     case .changed:
       let newValue = constrainMinPinchingValueIfNeeded(value: gesture.scale * savedRingScaleFactor)
 
-      let action: RingsAction = rings.arrangement.concentricity == 0.0
+      let action: RingsViewAction = state.arrangement.concentricity == 0.0
         ? .concentricRingsPinched(scaleFactor: newValue)
         : .acentricRingsPinched(scaleFactor: newValue)
 
@@ -280,7 +341,7 @@ public final class RingsView: UIView {
                      usingSpringWithDamping: 0.5,
                      initialSpringVelocity: 0.5,
                      options: [.allowUserInteraction]) {
-        if self.rings.arrangement.concentricity == 0.0 {
+        if self.state.arrangement.concentricity == 0.0 {
           self.callback(self, .concentricRingsPinched(scaleFactor: clampedScale))
         } else {
           self.callback(self, .acentricRingsPinched(scaleFactor: clampedScale))
@@ -291,7 +352,7 @@ public final class RingsView: UIView {
       break
 
     default:
-      rings.arrangement.scaleFactorWhenFullyConcentric = savedRingScaleFactor
+      state.arrangement.scaleFactorWhenFullyConcentric = savedRingScaleFactor
     }
   }
 
@@ -303,13 +364,13 @@ public final class RingsView: UIView {
     case let .some(value) where value.0 == .period:
       dragDirectionModifier = 1
     case let .some(value) where value.0 == .session && layoutDirection == .vertical:
-      if rings.arrangement.concentricity > 0 {
+      if state.arrangement.concentricity > 0 {
         dragDirectionModifier = value.1.y - 20 > bounds.height / 2 ? -1 : 1
       } else {
         dragDirectionModifier = value.1.y + 50 > bounds.height / 2 ? 1 : -1
       }
     case let .some(value) where value.0 == .session && layoutDirection == .horizontal:
-      if rings.arrangement.concentricity > 0 {
+      if state.arrangement.concentricity > 0 {
         dragDirectionModifier = value.1.x > bounds.width / 2 ? -1 : 1
       } else {
         dragDirectionModifier = value.1.x > bounds.width / 2 ? 1 : -1
@@ -332,9 +393,9 @@ public final class RingsView: UIView {
     case .began:
       panStart?.1 = gesture.location(in: self)
       canAnimateZIndex = false
-      panStartConcentricity = rings.arrangement.concentricity
+      panStartConcentricity = state.arrangement.concentricity
 
-      let gestureKeyPath = rings.arrangement.dragGestureKeyPathFor(bounds: bounds)
+      let gestureKeyPath = state.arrangement.dragGestureKeyPathFor(bounds: bounds)
       let dragAmount = -gesture.translation(in: self)[keyPath: gestureKeyPath] * dragDirectionModifier
       let concentricDelta = dragAmount / dimension
       let concentricity = concentricDelta + panStartConcentricity
@@ -342,7 +403,7 @@ public final class RingsView: UIView {
       callback(self, .ringConcentricityDragged(concentricity: concentricity))
 
     case .changed:
-      let gestureKeyPath = rings.arrangement.dragGestureKeyPathFor(bounds: bounds)
+      let gestureKeyPath = state.arrangement.dragGestureKeyPathFor(bounds: bounds)
       let dragAmount = -gesture.translation(in: self)[keyPath: gestureKeyPath] * dragDirectionModifier
       let concentricDelta = dragAmount / dimension
       let concentricity = concentricDelta + panStartConcentricity
@@ -353,7 +414,7 @@ public final class RingsView: UIView {
       canAnimateZIndex = true
       panStart = nil
 
-      let gestureKeyPath = rings.arrangement.dragGestureKeyPathFor(bounds: bounds)
+      let gestureKeyPath = state.arrangement.dragGestureKeyPathFor(bounds: bounds)
       let dragAmount = -gesture.translation(in: self)[keyPath: gestureKeyPath] * dragDirectionModifier
 
       let velocity = gesture.velocity(in: self)
@@ -403,7 +464,7 @@ public final class RingsView: UIView {
   }
 
   private var focusRingKeyPath: KeyPath<RingsView, CompositeRingView> {
-    switch rings.arrangement.focus {
+    switch state.arrangement.focus {
     case .period:
       return \.period
     case .session:
@@ -965,7 +1026,7 @@ final class LabelView: UIView {
   }
 }
 
-public extension RingsState {
+public extension RingsViewState {
   init() {
     content = RingsData()
     arrangement = RingsLayout(acentricAxis: .alongLongestDimension,
