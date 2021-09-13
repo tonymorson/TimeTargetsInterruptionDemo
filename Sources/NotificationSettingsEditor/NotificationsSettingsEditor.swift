@@ -3,7 +3,7 @@ import Foundation
 import SwiftUIKit
 import UIKit
 
-public struct NotificationSettingsEditorState: Hashable, Equatable {
+public struct NotificationSettingsEditorState: Equatable {
   public var showNotifications: Bool = false
   public var playSound: Bool = true
 
@@ -63,46 +63,46 @@ public func notificationSettingsEditorReducer(state: inout NotificationSettingsE
 }
 
 public final class NotificationSettingsEditor: Form<NotificationSettingsEditorState> {
-  var userAction: (NotificationSettingsEditorAction) -> Void
+  public var actions: PassthroughSubject<NotificationSettingsEditorAction, Never>!
 
-  public init(userData: AnyPublisher<NotificationSettingsEditorState, Never>,
-              userAction: @escaping (NotificationSettingsEditorAction) -> Void)
-  {
-    self.userAction = userAction
+  public init(userData: AnyPublisher<NotificationSettingsEditorState, Never>) {
+    self.actions = PassthroughSubject<NotificationSettingsEditorAction, Never>()
+
+    let actions = actions!
 
     super.init(userData: userData) { publisher, currentValue in
       Section(header: "Status") {
         ToggleRow(title: "Show Notifications",
                   isOn: publisher.map(\.showNotifications).eraseToAnyPublisher())
-        { userAction(.showNotificationsToggled($0)) }
+        { actions.send(.showNotificationsToggled($0)) }
 
         if currentValue.showNotifications {
           ToggleRow(title: "Play Sounds",
                     isOn: publisher.map(\.playSound).eraseToAnyPublisher())
-          { userAction(.playSoundToggled($0)) }
+          { actions.send(.playSoundToggled($0)) }
         }
       }
 
       if currentValue.showNotifications {
         Section(header: "Transitioning") {
           Toggle(title: "Ready to start work", isOn: publisher.map(\.onStartPeriod).eraseToAnyPublisher())
-            { userAction(.onStartPeriodToggled($0)) }
+            { actions.send(.onStartPeriodToggled($0)) }
 
           Toggle(title: "Ready for a break", isOn: publisher.map(\.onStartBreak).eraseToAnyPublisher())
-            { userAction(.onStartBreakToggled($0)) }
+            { actions.send(.onStartBreakToggled($0)) }
         }
 
         Section(header: "Inactivity Reminder", footer: "Shows an alert if countdown paused for too long.") {
           Toggle(title: "Long Pauses", isOn: publisher.map(\.onLongPause).eraseToAnyPublisher())
-            { userAction(.onLongPauseToggled($0)) }
+            { actions.send(.onLongPauseToggled($0)) }
         }
 
         Section(header: "Significant Progress") {
           Toggle(title: "Halfway", isOn: publisher.map(\.onHalfwayToDailyTarget).eraseToAnyPublisher())
-            { userAction(.onHalfwayToDailyToggled($0)) }
+            { actions.send(.onHalfwayToDailyToggled($0)) }
 
           Toggle(title: "Target Reached", isOn: publisher.map(\.onReachingDailyTarget).eraseToAnyPublisher())
-            { userAction(.onReachingDailyTargetToggled($0)) }
+            { actions.send(.onReachingDailyTargetToggled($0)) }
         }
       }
     }
