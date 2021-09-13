@@ -138,6 +138,14 @@ public final class RingsView: UIView {
     apply(concentricLayout: ConcentricLayout(bounds: bounds, settings: state.arrangement))
   }
 
+  override public func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
+      updateRing(details: state.content)
+    }
+
+    super.traitCollectionDidChange(previousTraitCollection)
+  }
+
   private let pan = UIPanGestureRecognizer()
   private let pinch = UIPinchGestureRecognizer()
   private let tap = UITapGestureRecognizer()
