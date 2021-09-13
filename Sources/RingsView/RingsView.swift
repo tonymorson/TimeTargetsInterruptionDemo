@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import UIKit
 
@@ -73,12 +74,13 @@ public struct RingsViewEnvironment {
 }
 
 public final class RingsView: UIView {
-  public var callback: (RingsView, RingsViewAction) -> Void
+  public var output = PassthroughSubject<RingsViewAction, Never>()
 
-  public var state = RingsViewState() {
+  fileprivate var state = RingsViewState() {
     didSet { update(from: oldValue, to: state) }
   }
 
+  private var cancellables: Set<AnyCancellable> = []
   private let periodTrack = RingView(frame: .zero)
   private let sessionTrack = RingView(frame: .zero)
   private let targetTrack = RingView(frame: .zero)
@@ -115,10 +117,13 @@ public final class RingsView: UIView {
     }
   }
 
-  public init(callback: @escaping (RingsView, RingsViewAction) -> Void) {
-    self.callback = callback
-
+  public init(input: AnyPublisher<RingsViewState, Never>) {
     super.init(frame: .zero)
+
+    input.sink { value in
+      self.state = value
+    }
+    .store(in: &cancellables)
 
     setup()
   }
@@ -247,7 +252,8 @@ public final class RingsView: UIView {
 
   @objc private func onTap(gesture: UITapGestureRecognizer) {
     if let ring = ringHitTest(for: gesture) {
-      return callback(self, .ringsTapped(ring))
+      output.send(.ringsTapped(ring))
+      return
     }
 
     if focus.point(inside: gesture.location(in: focus), with: nil) {
@@ -257,12 +263,12 @@ public final class RingsView: UIView {
       let distance = distanceBetween(point: gesture.location(in: focus), and: midPoint)
 
       if distance >= focusInnerRadius, distance < periodOuterRadius {
-        callback(self, .concentricRingsTappedInColoredBandsArea)
+        output.send(.concentricRingsTappedInColoredBandsArea)
         return
       }
     }
 
-    callback(self, .ringsTapped(nil))
+    output.send(.ringsTapped(nil))
   }
 
   private func ringHitTest(for gesture: UITapGestureRecognizer) -> RingSemantic? {
@@ -326,9 +332,9 @@ public final class RingsView: UIView {
       let newValue = constrainMinPinchingValueIfNeeded(value: gesture.scale * savedRingScaleFactor)
 
       if state.arrangement.concentricity == 0.0 {
-        callback(self, .concentricRingsPinched(scaleFactor: newValue))
+        output.send(.concentricRingsPinched(scaleFactor: newValue))
       } else {
-        callback(self, .acentricRingsPinched(scaleFactor: newValue))
+        output.send(.acentricRingsPinched(scaleFactor: newValue))
       }
 
     case .changed:
@@ -338,7 +344,7 @@ public final class RingsView: UIView {
         ? .concentricRingsPinched(scaleFactor: newValue)
         : .acentricRingsPinched(scaleFactor: newValue)
 
-      callback(self, action)
+      output.send(action)
 
     case .ended:
       let pinchScale = constrainMinPinchingValueIfNeeded(value: gesture.scale * savedRingScaleFactor)
@@ -350,9 +356,9 @@ public final class RingsView: UIView {
                      initialSpringVelocity: 0.5,
                      options: [.allowUserInteraction]) {
         if self.state.arrangement.concentricity == 0.0 {
-          self.callback(self, .concentricRingsPinched(scaleFactor: clampedScale))
+          self.output.send(.concentricRingsPinched(scaleFactor: clampedScale))
         } else {
-          self.callback(self, .acentricRingsPinched(scaleFactor: clampedScale))
+          self.output.send(.acentricRingsPinched(scaleFactor: clampedScale))
         }
       }
 
@@ -408,7 +414,7 @@ public final class RingsView: UIView {
       let concentricDelta = dragAmount / dimension
       let concentricity = concentricDelta + panStartConcentricity
 
-      callback(self, .ringConcentricityDragged(concentricity: concentricity))
+      output.send(.ringConcentricityDragged(concentricity: concentricity))
 
     case .changed:
       let gestureKeyPath = state.arrangement.dragGestureKeyPathFor(bounds: bounds)
@@ -416,7 +422,7 @@ public final class RingsView: UIView {
       let concentricDelta = dragAmount / dimension
       let concentricity = concentricDelta + panStartConcentricity
 
-      callback(self, .ringConcentricityDragged(concentricity: concentricity))
+      output.send(.ringConcentricityDragged(concentricity: concentricity))
 
     case .ended:
       canAnimateZIndex = true
@@ -460,7 +466,7 @@ public final class RingsView: UIView {
                      usingSpringWithDamping: damping,
                      initialSpringVelocity: springVelocity,
                      options: [.allowUserInteraction, .beginFromCurrentState]) {
-        self.callback(self, .ringConcentricityDragged(concentricity: restingConcentricity))
+        self.output.send(.ringConcentricityDragged(concentricity: restingConcentricity))
       }
     case .cancelled:
       break

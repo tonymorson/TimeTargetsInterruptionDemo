@@ -1,32 +1,35 @@
+import Combine
 import RingsView
 import UIKit
 
 final class RingsViewController: UIViewController {
-  var savedPortraitArrangement: RingsLayout!
-  var savedLandscapeArrangement: RingsLayout!
+  private var cancellables: Set<AnyCancellable> = []
+  private var savedPortraitArrangement: RingsLayout!
+  private var savedLandscapeArrangement: RingsLayout!
 
-  var state = RingsViewState() {
-    didSet {
-      if view.isPortrait {
-        savedPortraitArrangement = state.arrangement
-      } else {
-        savedLandscapeArrangement = state.arrangement
-      }
-
-      (view as! RingsView).state = state
-    }
-  }
-
-  var environment = RingsViewEnvironment()
+  private var environment = RingsViewEnvironment()
+  private var ringsViewState = CurrentValueSubject<RingsViewState, Never>(RingsViewState())
 
   override func loadView() {
-    view = RingsView { _, ringsAction in
-      ringsViewReducer(state: &self.state, action: ringsAction, environment: self.environment)
+    view = RingsView(input: ringsViewState.eraseToAnyPublisher())
+
+    (view as! RingsView).output.sink { action in
+      ringsViewReducer(state: &self.ringsViewState.value, action: action, environment: self.environment)
     }
+    .store(in: &cancellables)
 
-    savedPortraitArrangement = (view as! RingsView).state.arrangement
-    savedLandscapeArrangement = (view as! RingsView).state.arrangement
+    ringsViewState.sink { [weak self] value in
+      guard let self = self else { return }
+      if self.view.isPortrait {
+        self.savedPortraitArrangement = value.arrangement
+      } else {
+        self.savedLandscapeArrangement = value.arrangement
+      }
+    }
+    .store(in: &cancellables)
 
+    savedPortraitArrangement = ringsViewState.value.arrangement
+    savedLandscapeArrangement = ringsViewState.value.arrangement
     savedLandscapeArrangement.concentricity = -1.0
   }
 
@@ -34,11 +37,9 @@ final class RingsViewController: UIViewController {
     super.viewWillTransition(to: size, with: coordinator)
 
     coordinator.animate(alongsideTransition: { _ in
-      if size.isPortrait {
-        (self.view as! RingsView).state.arrangement = self.savedPortraitArrangement
-      } else {
-        (self.view as! RingsView).state.arrangement = self.savedLandscapeArrangement
-      }
+      self.ringsViewState.value.arrangement = size.isPortrait
+        ? self.savedPortraitArrangement
+        : self.savedLandscapeArrangement
     })
   }
 }
