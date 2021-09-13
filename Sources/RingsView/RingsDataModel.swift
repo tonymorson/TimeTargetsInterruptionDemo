@@ -25,6 +25,8 @@ public struct RingsData: Equatable {
                                             subtitle: "completed",
                                             caption: "5 HOURS"),
                                value: 0.8)
+
+  public init() {}
 }
 
 public struct RingData: Equatable {

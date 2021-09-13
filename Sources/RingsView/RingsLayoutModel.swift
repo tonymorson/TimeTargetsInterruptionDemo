@@ -17,4 +17,17 @@ public struct RingsLayout: Equatable {
                              concentricMax: scaleFactorWhenFullyConcentric,
                              acentricMin: scaleFactorWhenFullyAcentric)
   }
+
+  public init(acentricAxis: AcentricLayoutMode,
+              concentricity: CGFloat,
+              focus: RingSemantic,
+              scaleFactorWhenFullyAcentric: CGFloat,
+              scaleFactorWhenFullyConcentric: CGFloat)
+  {
+    self.acentricAxis = acentricAxis
+    self.concentricity = concentricity
+    self.focus = focus
+    self.scaleFactorWhenFullyAcentric = scaleFactorWhenFullyAcentric
+    self.scaleFactorWhenFullyConcentric = scaleFactorWhenFullyConcentric
+  }
 }

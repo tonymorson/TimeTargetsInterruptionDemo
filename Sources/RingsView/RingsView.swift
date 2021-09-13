@@ -5,6 +5,11 @@ import UIKit
 public struct RingsViewState: Equatable {
   public var arrangement: RingsLayout
   public var content: RingsData
+
+  public init(arrangement: RingsLayout, content: RingsData) {
+    self.arrangement = arrangement
+    self.content = content
+  }
 }
 
 public enum RingSemantic: Int { case period, session, target }
@@ -53,15 +58,6 @@ public func ringsViewReducer(state: inout RingsViewState, action: RingsViewActio
       state.content.period.trackColor = UIColor.systemGray5
       state.content.session.trackColor = .systemGray5
       state.content.target.trackColor = .systemGray5
-
-      //      state.data.period.color = .lightGray
-      //      state.data.session.color = .lightGray
-      //      state.data.target.color = .lightGray
-      //
-      //
-      //      state.data.period.trackColor = UIColor.systemGray3
-      //      state.data.session.trackColor = .systemGray3
-      //      state.data.target.trackColor = .systemGray3
     }
 
   case .ringsTapped(.none):
