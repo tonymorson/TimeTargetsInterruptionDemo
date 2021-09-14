@@ -116,6 +116,8 @@ class AppViewController: UIViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
 
+    view.tintColor = .systemRed
+
     let toolbar = makeToolbar(imageName: store.dataButtonIconImageName, parentView: view)
       .moveTo(view) { toolbar, parentView in
         toolbar.topAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.topAnchor)
@@ -128,8 +130,7 @@ class AppViewController: UIViewController {
       .moveTo(view) { bottomMenu, parentView in
         bottomMenu.centerXAnchor.constraint(equalTo: parentView.centerXAnchor)
         bottomMenu.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor)
-          .reactive(store.appState.map { $0.isShowingData ? 88 : 0 }.eraseToAnyPublisher(),
-                    initialValue: store.appState.value.isShowingData ? 88 : 0)
+          .reactive(store.appState.map { $0.isShowingData ? 88 : 0 }.eraseToAnyPublisher())
       }
 
     let tabBar = UITabBar()
@@ -140,11 +141,10 @@ class AppViewController: UIViewController {
     ]
 
     tabBar.moveTo(view) { tabBar, _ in
-      tabBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: 200)
-        .reactive(store.appState.map { $0.isShowingData ? 0 : 200 }.eraseToAnyPublisher(),
-                  initialValue: store.appState.value.isShowingData ? 0 : 200)
       tabBar.leadingAnchor.constraint(equalTo: view.leadingAnchor)
       tabBar.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+      tabBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: 200)
+        .reactive(store.appState.map { $0.isShowingData ? 0 : 200 }.eraseToAnyPublisher())
     }
 
     store.send(view.isPortrait
@@ -158,12 +158,10 @@ class AppViewController: UIViewController {
         ringsView.leadingAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.leadingAnchor)
         ringsView.trailingAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.trailingAnchor)
         ringsView.topAnchor.constraint(equalTo: toolbar.bottomAnchor)
-        ringsView.bottomAnchor.constraint(equalTo: bottomMenu.safeAreaLayoutGuide.topAnchor, constant: 0)
-          .reactive(store.appState.map(\.isShowingData).removeDuplicates().map { $0 ? nil : 0 }.eraseToAnyPublisher(),
-                    initialValue: store.appState.value.isShowingData ? nil : 0)
-        ringsView.heightAnchor.constraint(equalToConstant: view.bounds.height - 144)
-          .reactive(store.appState.map(\.isShowingData).removeDuplicates().map { $0 ? 150 : nil }.eraseToAnyPublisher(),
-                    initialValue: store.appState.value.isShowingData ? 150 : nil)
+        ringsView.bottomAnchor.constraint(equalTo: bottomMenu.topAnchor, constant: 0)
+          .reactive(store.appState.map(\.isShowingData).removeDuplicates().map { $0 ? nil : 0 }.eraseToAnyPublisher())
+        ringsView.heightAnchor.constraint(equalToConstant: 150)
+          .reactive(store.appState.map(\.isShowingData).removeDuplicates().map { $0 ? 150 : nil }.eraseToAnyPublisher())
       }
 
     ringsView.output
@@ -311,39 +309,5 @@ extension UIFont {
     }
 
     return UIFont(descriptor: descriptor, size: pointSize)
-  }
-}
-
-final class ReactiveLayoutConstraint: NSLayoutConstraint {
-  var cancellables: Set<AnyCancellable> = []
-
-  override init() {
-    super.init()
-  }
-
-  convenience init(constraint: NSLayoutConstraint, constant: AnyPublisher<CGFloat?, Never>) {
-    self.init(item: constraint.firstItem as Any,
-              attribute: constraint.firstAttribute,
-              relatedBy: constraint.relation,
-              toItem: constraint.secondItem,
-              attribute: constraint.secondAttribute,
-              multiplier: constraint.multiplier,
-              constant: constraint.constant)
-
-    constant.sink { value in
-      if let value = value {
-        self.constant = value
-        self.isActive = true
-      } else {
-        self.isActive = false
-      }
-    }
-    .store(in: &cancellables)
-  }
-}
-
-extension NSLayoutConstraint {
-  func reactive(_ publisher: AnyPublisher<CGFloat?, Never>, initialValue _: CGFloat?) -> ReactiveLayoutConstraint {
-    ReactiveLayoutConstraint(constraint: self, constant: publisher)
   }
 }
