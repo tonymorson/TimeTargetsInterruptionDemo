@@ -3,11 +3,11 @@ import Foundation
 import UIKit
 
 open class Form<V>: UITableViewController {
+  public var onDismiss: () -> Void = {}
   private var cancellables: Set<AnyCancellable> = []
   private var content: (AnyPublisher<V, Never>, V) -> [FormSection]
   private var cells: [UITableViewCell] = []
   private var dataSource: ValueFormDiffableDataSource!
-  private var onDismiss: () -> Void = {}
   private var userData: AnyPublisher<V, Never>
 
   deinit {
@@ -50,7 +50,8 @@ open class Form<V>: UITableViewController {
     fatalError("init(coder:) has not been implemented")
   }
 
-  public func onDismiss(_ callback: @escaping () -> Void) -> Self {
+  @discardableResult
+  public func setOnDismiss(_ callback: @escaping () -> Void) -> Self {
     onDismiss = callback
     return self
   }

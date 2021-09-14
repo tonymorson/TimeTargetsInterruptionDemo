@@ -18,6 +18,7 @@
 		418F9A1B26ECB39A0005624B /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 418F9A1926ECB39A0005624B /* Main.storyboard */; };
 		418F9A1D26ECB39B0005624B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 418F9A1C26ECB39B0005624B /* Assets.xcassets */; };
 		418F9A2026ECB39B0005624B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 418F9A1E26ECB39B0005624B /* LaunchScreen.storyboard */; };
+		4195714B26EFF98A0001095C /* SettingsEditor in Frameworks */ = {isa = PBXBuildFile; productRef = 4195714A26EFF98A0001095C /* SettingsEditor */; };
 		4198973126EE0996008CB625 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4198973026EE0996008CB625 /* AppDelegate.swift */; };
 		4198973326EE0996008CB625 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4198973226EE0996008CB625 /* SceneDelegate.swift */; };
 		4198973D26EE099A008CB625 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4198973B26EE099A008CB625 /* LaunchScreen.storyboard */; };
@@ -68,6 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4195714B26EFF98A0001095C /* SettingsEditor in Frameworks */,
 				4117DBFD26ECB59100DE4AEA /* SwiftUIKit in Frameworks */,
 				41F7333A26EFDC6800D96D11 /* RingsView in Frameworks */,
 			);
@@ -216,6 +218,7 @@
 			packageProductDependencies = (
 				4117DBFC26ECB59100DE4AEA /* SwiftUIKit */,
 				41F7333926EFDC6800D96D11 /* RingsView */,
+				4195714A26EFF98A0001095C /* SettingsEditor */,
 			);
 			productName = iOS;
 			productReference = 418F9A1126ECB39A0005624B /* iOS.app */;
@@ -804,6 +807,10 @@
 			productName = SwiftUIKit;
 		};
 		416F650D26EE24D8000DF69C /* SettingsEditor */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SettingsEditor;
+		};
+		4195714A26EFF98A0001095C /* SettingsEditor */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SettingsEditor;
 		};

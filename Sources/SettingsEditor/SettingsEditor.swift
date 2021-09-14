@@ -85,6 +85,15 @@ public func settingsEditorReducer(state: inout SettingsEditorState,
 public final class SettingsEditor: UINavigationController {
   public var actions: PassthroughSubject<SettingsEditorAction, Never>
 
+  public var onDismiss: () -> Void {
+    set {
+      (viewControllers.first as! SettingsEditorForm).setOnDismiss(newValue)
+    }
+    get {
+      (viewControllers.first as! SettingsEditorForm).onDismiss
+    }
+  }
+
   public init(state: AnyPublisher<SettingsEditorState, Never>) {
     actions = PassthroughSubject<SettingsEditorAction, Never>()
     super.init(rootViewController: SettingsEditorForm(state: state, actions: actions).navigationBarTitle("Settings"))
