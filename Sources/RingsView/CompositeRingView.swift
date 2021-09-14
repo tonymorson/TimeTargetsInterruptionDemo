@@ -22,7 +22,7 @@ final class CompositeRingView: UIView {
 
   var ring = RingView(frame: .zero)
   var text = RingTextView(frame: .zero)
-  fileprivate var caption = CaptionView(frame: .zero)
+  var caption = CaptionView(frame: .zero)
 
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -89,7 +89,7 @@ final class CompositeRingView: UIView {
   }
 }
 
-private final class CaptionView: UIView {
+final class CaptionView: UIView {
   var text: String = "" {
     didSet {
       guard oldValue != text else { return }

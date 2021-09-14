@@ -520,6 +520,32 @@ public final class RingsView: UIView {
   }
 
   private var panStart: (RingSemantic, CGPoint)?
+
+  override public var bounds: CGRect {
+    didSet {
+      forceRedraw()
+    }
+  }
+}
+
+private extension RingsView {
+  func forceRedraw() {
+    periodTrack.layer.setNeedsDisplay()
+    sessionTrack.layer.setNeedsDisplay()
+    targetTrack.layer.setNeedsDisplay()
+
+    period.ring.layer.setNeedsDisplay()
+    session.ring.layer.setNeedsDisplay()
+    target.ring.layer.setNeedsDisplay()
+
+    period.text.layer.setNeedsDisplay()
+    session.text.layer.setNeedsDisplay()
+    target.text.layer.setNeedsDisplay()
+
+    period.caption.layer.setNeedsDisplay()
+    session.caption.layer.setNeedsDisplay()
+    target.caption.layer.setNeedsDisplay()
+  }
 }
 
 extension RingsView: UIGestureRecognizerDelegate {
