@@ -201,6 +201,25 @@ class AppViewController: UIViewController {
         }
       }
       .store(in: &cancellables)
+
+    let segmentedControl = UISegmentedControl(items: [
+      UIAction(title: "Period") { _ in },
+      UIAction(title: "Session") { _ in },
+      UIAction(title: "Target") { _ in },
+    ])
+      .moveTo(view) { control, parent in
+        control.leadingAnchor.constraint(equalTo: parent.safeAreaLayoutGuide.leadingAnchor)
+        control.trailingAnchor.constraint(equalTo: parent.safeAreaLayoutGuide.trailingAnchor)
+        control.topAnchor.constraint(equalTo: ringsView.bottomAnchor, constant: 10)
+      }
+
+    segmentedControl.alpha = store.appState.value.isShowingData ? 1.0 : 0.0
+
+    store.appState.sink { state in
+      segmentedControl.alpha = state.isShowingData ? 1.0 : 0.0
+      segmentedControl.selectedSegmentIndex = 0
+    }
+    .store(in: &cancellables)
   }
 
   override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
