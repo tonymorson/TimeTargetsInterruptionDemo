@@ -210,52 +210,25 @@ public extension UIView {
     removeFromSuperview()
     view.addSubview(self)
     translatesAutoresizingMaskIntoConstraints = false
-    NSLayoutConstraint.activate(constraints(self, view))
+
+    NSLayoutConstraint.activate(
+      constraints(self, view)
+        .filter { !($0 is ReactiveLayoutConstraint) }
+    )
 
     return self
   }
 }
 
-final class WrappedUISwitch: UISwitch {
-  private let callback: (Bool) -> Void
-  private var cancellables: Set<AnyCancellable> = []
-
-  public init(isOn: AnyPublisher<Bool, Never>,
-              callback: @escaping (Bool) -> Void)
-  {
-    self.callback = callback
-
-    super.init(frame: .zero)
-
-    addTarget(self, action: #selector(buttonTapped), for: .valueChanged)
-
-    isOn.sink { [weak self] isOn in
-      guard self?.isOn != isOn else { return }
-
-      self?.setOn(isOn, animated: true)
-    }
-    .store(in: &cancellables)
-  }
-
-  @available(*, unavailable)
-  required init?(coder _: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-
-  @objc func buttonTapped(sender: UISwitch) {
-    callback(sender.isOn)
-  }
-}
-
 public final class ToggleRow: UITableViewCell {
-  private let toggle: WrappedUISwitch
+  private let toggle: ReactiveUISwitch
 
   public init(title: String,
               subtitle: String? = nil,
               isOn: AnyPublisher<Bool, Never>,
               callback: @escaping (Bool) -> Void)
   {
-    toggle = WrappedUISwitch(isOn: isOn, callback: callback)
+    toggle = ReactiveUISwitch(isOn: isOn, callback: callback)
 
     super.init(style: .subtitle, reuseIdentifier: title)
 
@@ -287,5 +260,5 @@ public func Toggle(title: String,
 public func Toggle(isOn: AnyPublisher<Bool, Never>,
                    callback: @escaping (Bool) -> Void) -> UISwitch
 {
-  WrappedUISwitch(isOn: isOn, callback: callback)
+  ReactiveUISwitch(isOn: isOn, callback: callback)
 }
