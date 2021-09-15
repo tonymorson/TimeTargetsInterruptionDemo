@@ -133,6 +133,13 @@ class AppViewController: UIViewController {
           .reactive(store.appState.map { $0.isShowingData ? 88 : 0 }.eraseToAnyPublisher())
       }
 
+    if #available(iOS 14, *) {
+      bottomMenu.menu = demoMenu
+      bottomMenu.showsMenuAsPrimaryAction = true
+    } else {
+      bottomMenu.addTarget(self, action: #selector(didTapMenuButton(sender:)), for: .touchUpInside)
+    }
+
     let tabBar = UITabBar()
     tabBar.items = [
       UITabBarItem(title: "Today", image: UIImage(systemName: "star.fill"), tag: 0),
@@ -180,8 +187,8 @@ class AppViewController: UIViewController {
           self.present(editor, animated: true)
 
           (editor.viewControllers.first)?
-            .navigationBarItems(leading: { UIBarButtonItem(.cancel) { store.send(.settingsEditorDismissed) } })
-            .navigationBarItems(trailing: { UIBarButtonItem(.done) { store.send(.settingsEditorDismissed) } })
+            .navigationBarItems(leading: { BarButtonItem(.cancel) { store.send(.settingsEditorDismissed) } })
+            .navigationBarItems(trailing: { BarButtonItem(.done) { store.send(.settingsEditorDismissed) } })
 
           editor.actions.sink { action in
             store.send(.settings(action))
@@ -194,7 +201,7 @@ class AppViewController: UIViewController {
     store.appState.map(\.settings)
       .filter { $0 == nil }
       .sink { _ in
-        if self.presentedViewController != nil {
+        if self.presentedViewController is SettingsEditor {
           self.dismiss(animated: true)
         }
       }
@@ -220,6 +227,21 @@ class AppViewController: UIViewController {
     .store(in: &cancellables)
   }
 
+  var demoMenu: UIMenu {
+    var menuItems: [UIAction] {
+      [
+        UIAction(title: "Start Break", image: UIImage(systemName: "arrow.right"), handler: { _ in
+          //        viewStore.send(.rings(.ringsTapped(.period)))
+        }),
+        UIAction(title: "Skip Break", image: UIImage(systemName: "arrow.right.to.line"), handler: { _ in
+          //        viewStore.send(.rings(.ringsTapped(.period)))
+        }),
+      ].reversed()
+    }
+
+    return UIMenu(title: "", image: nil, identifier: nil, options: [], children: menuItems)
+  }
+
   override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
     coordinator.animate { _ in
       store.send(size.isPortrait
@@ -228,6 +250,16 @@ class AppViewController: UIViewController {
     }
 
     super.viewWillTransition(to: size, with: coordinator)
+  }
+
+  @objc func didTapMenuButton(sender _: UIButton) {
+    let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+
+    alert.addAction(UIAlertAction(title: "Start Break?", style: .default, handler: { _ in }))
+    alert.addAction(UIAlertAction(title: "Skip Break?", style: .default, handler: { _ in }))
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in }))
+
+    present(alert, animated: true)
   }
 }
 
@@ -262,42 +294,9 @@ private func makeToolbar(imageName: AnyPublisher<String, Never>, parentView: UIV
 }
 
 func makeMenuButton() -> UIButton {
-  var menuItems: [UIAction] {
-    [
-      UIAction(title: "Start Break", image: UIImage(systemName: "arrow.right"), handler: { _ in
-//        viewStore.send(.rings(.ringsTapped(.period)))
-      }),
-      UIAction(title: "Skip Break", image: UIImage(systemName: "arrow.right.to.line"), handler: { _ in
-//        viewStore.send(.rings(.ringsTapped(.period)))
-      }),
-    ].reversed()
-  }
-
-  var demoMenu: UIMenu {
-    UIMenu(title: "", image: nil, identifier: nil, options: [], children: menuItems)
-  }
-
-  var title = AttributedString("Ready for a break?")
-  title.font = UIFont.systemFont(ofSize: 18, weight: .light).rounded()
-
-  var attrString = AttributedString("You have worked 29 minutes taking 3 breaks so far.")
-  attrString.foregroundColor = .label
-
-  var configuration = UIButton.Configuration.gray() // 1
-  configuration.cornerStyle = .dynamic // 2
-  configuration.baseForegroundColor = UIColor.systemRed
-  configuration.baseBackgroundColor = .clear
-  configuration.buttonSize = .small
-  //    configuration.title = "Next work period: 3.55pm"
-  configuration.attributedTitle = title
-  configuration.attributedSubtitle = attrString
-  configuration.titlePadding = 4
-  configuration.titleAlignment = .center
-
-  let button = UIButton(configuration: configuration, primaryAction: nil)
-  button.tintColor = .label
-  button.menu = demoMenu
-  button.showsMenuAsPrimaryAction = true
+  let button = UIButton(type: .roundedRect)
+  button.setTitle("Ready for a break?", for: .normal)
+  button.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .light).rounded()
 
   return button
 }
