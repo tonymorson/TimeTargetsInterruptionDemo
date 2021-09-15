@@ -366,6 +366,7 @@ public final class RingsView: UIView {
     }
   }
 
+  private var panStart: (RingSemantic, CGPoint)?
   private var panStartConcentricity: CGFloat = 0.0
   @objc private func onPan(gesture: UIPanGestureRecognizer) {
     let dragDirectionModifier: CGFloat
@@ -425,10 +426,10 @@ public final class RingsView: UIView {
       panStart = nil
 
       let gestureKeyPath = state.arrangement.dragGestureKeyPathFor(bounds: bounds)
-      let dragAmount = -gesture.translation(in: self)[keyPath: gestureKeyPath] * dragDirectionModifier
+      let dragAmount = -gesture.translation(in: self)[keyPath: gestureKeyPath]
 
       let velocity = gesture.velocity(in: self)
-      let projectedTranslation = UIGestureRecognizer.project(isPortrait ? velocity.y : velocity.x, onto: -dragAmount)
+      let projectedTranslation = UIGestureRecognizer.project(isPortrait ? velocity.y : velocity.x, onto: -dragAmount) * dragDirectionModifier
 
       let concentricDelta = -projectedTranslation / dimension
       let concentricity = concentricDelta + panStartConcentricity
@@ -518,8 +519,6 @@ public final class RingsView: UIView {
     focus.alpha = concentricLayout.focusAlpha
     focusTrack.alpha = concentricLayout.focusAlpha
   }
-
-  private var panStart: (RingSemantic, CGPoint)?
 
   override public var bounds: CGRect {
     didSet {
