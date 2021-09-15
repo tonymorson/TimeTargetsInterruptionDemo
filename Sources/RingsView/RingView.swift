@@ -82,8 +82,9 @@ private final class RingLayer: CALayer {
   var radius: CGFloat {
     let dimension = (min(bounds.width, bounds.height) - 0)
     let radiusIn: CGFloat = (dimension / 2) - (lineWidth / 2)
+    let gapBetweenRings = (lineWidth + (bounds.width / 340))
 
-    return radiusIn - ((lineWidth + 1) * zIndex)
+    return radiusIn - (gapBetweenRings * zIndex)
   }
 
   var innerRadius: CGFloat {
