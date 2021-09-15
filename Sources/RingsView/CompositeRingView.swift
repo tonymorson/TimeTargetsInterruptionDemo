@@ -113,7 +113,7 @@ final class CaptionView: UIView {
 
   private func setupLayer() {
     layer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-    layer.contentsScale = UIScreen.main.scale
+    layer.contentsScale = UIScreen.main.scale * 3
   }
 
   override func draw(_ layer: CALayer, in ctx: CGContext) {

@@ -62,7 +62,7 @@ final class RingView: UIView {
 
   private func setupRingLayer() {
     ringLayer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-    ringLayer.contentsScale = UIScreen.main.scale
+    ringLayer.contentsScale = UIScreen.main.scale * 1.4
   }
 }
 
