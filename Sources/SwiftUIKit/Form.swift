@@ -163,14 +163,16 @@ private class ValueFormDiffableDataSource: UITableViewDiffableDataSource<FormSec
   }
 
   override func tableView(_: UITableView, titleForHeaderInSection section: Int) -> String? {
-    let section = sectionIdentifier(for: section)
+    let snapshot = snapshot()
+    let section = snapshot.sectionIdentifiers[section]
 
-    return section?.header
+    return section.header
   }
 
   override func tableView(_: UITableView, titleForFooterInSection section: Int) -> String? {
-    let section = sectionIdentifier(for: section)
+    let snapshot = snapshot()
+    let section = snapshot.sectionIdentifiers[section]
 
-    return section?.footer
+    return section.footer
   }
 }
