@@ -53,30 +53,36 @@ enum AppViewAction: Equatable {
 
 struct AppEnvironment {}
 
-struct AppStore {
-  let appState = CurrentValueSubject<AppViewState, Never>(AppViewState())
+class AppStore {
+  @Published var appState = AppViewState()
   let environment = AppEnvironment()
 
   func send(_ action: AppViewAction) {
-    appReducer(state: &appState.value, action: action, environment: environment)
+    appReducer(state: &appState, action: action, environment: environment)
   }
 
   var dataButtonIconImageName: AnyPublisher<String, Never> {
-    appState.map(\.isShowingData)
+    isShowingData
       .map { $0 ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right" }
-      .removeDuplicates()
       .eraseToAnyPublisher()
   }
 
   var settings: AnyPublisher<SettingsEditorState?, Never> {
-    appState.map(\.settings)
+    $appState.map(\.settings)
       .removeDuplicates()
       .eraseToAnyPublisher()
   }
 
   var rings: AnyPublisher<RingsViewState, Never> {
-    appState.map(\.rings)
+    $appState.map(\.rings)
       .removeDuplicates()
+      .eraseToAnyPublisher()
+  }
+
+  var isShowingData: AnyPublisher<Bool, Never> {
+    $appState
+      .removeDuplicates()
+      .map(\.isShowingData)
       .eraseToAnyPublisher()
   }
 }
@@ -130,7 +136,7 @@ class AppViewController: UIViewController {
       .moveTo(view) { bottomMenu, parentView in
         bottomMenu.centerXAnchor.constraint(equalTo: parentView.centerXAnchor)
         bottomMenu.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor)
-          .reactive(store.appState.map { $0.isShowingData ? 88 : 0 }.eraseToAnyPublisher())
+          .reactive(store.isShowingData.map { $0 ? 88 : 0 }.eraseToAnyPublisher())
       }
 
     if #available(iOS 14, *) {
@@ -151,7 +157,7 @@ class AppViewController: UIViewController {
       tabBar.leadingAnchor.constraint(equalTo: view.leadingAnchor)
       tabBar.trailingAnchor.constraint(equalTo: view.trailingAnchor)
       tabBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: 200)
-        .reactive(store.appState.map { $0.isShowingData ? 0 : 200 }.eraseToAnyPublisher())
+        .reactive(store.isShowingData.map { $0 ? 0 : 200 }.eraseToAnyPublisher())
     }
 
     store.send(view.isPortrait
@@ -166,9 +172,9 @@ class AppViewController: UIViewController {
         ringsView.trailingAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.trailingAnchor)
         ringsView.topAnchor.constraint(equalTo: toolbar.bottomAnchor)
         ringsView.bottomAnchor.constraint(equalTo: bottomMenu.topAnchor, constant: 0)
-          .reactive(store.appState.map(\.isShowingData).removeDuplicates().map { $0 ? nil : 0 }.eraseToAnyPublisher())
+          .reactive(store.isShowingData.map { $0 ? nil : 0 }.eraseToAnyPublisher())
         ringsView.heightAnchor.constraint(equalToConstant: 150)
-          .reactive(store.appState.map(\.isShowingData).removeDuplicates().map { $0 ? 150 : nil }.eraseToAnyPublisher())
+          .reactive(store.isShowingData.map { $0 ? 150 : nil }.eraseToAnyPublisher())
       }
 
     ringsView.output
@@ -177,7 +183,7 @@ class AppViewController: UIViewController {
       }
       .store(in: &cancellables)
 
-    store.appState.map(\.settings)
+    store.$appState.map(\.settings)
       .filter { $0 != nil }
       .sink { _ in
         if self.presentedViewController == nil {
@@ -198,7 +204,7 @@ class AppViewController: UIViewController {
       }
       .store(in: &cancellables)
 
-    store.appState.map(\.settings)
+    store.$appState.map(\.settings)
       .filter { $0 == nil }
       .sink { _ in
         if self.presentedViewController is SettingsEditor {
@@ -218,9 +224,7 @@ class AppViewController: UIViewController {
         control.topAnchor.constraint(equalTo: ringsView.bottomAnchor, constant: 10)
       }
 
-    segmentedControl.alpha = store.appState.value.isShowingData ? 1.0 : 0.0
-
-    store.appState.sink { state in
+    store.$appState.sink { state in
       segmentedControl.alpha = state.isShowingData ? 1.0 : 0.0
       segmentedControl.selectedSegmentIndex = 0
     }
