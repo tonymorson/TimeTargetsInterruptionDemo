@@ -14,7 +14,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     let editor = SettingsEditor(state: settings.eraseToAnyPublisher())
 
-    let actions = editor.actions
+    let actions = editor.sentActions
 
     actions.sink { action in
       settingsEditorReducer(state: &settings.value, action: action, environment: environment)

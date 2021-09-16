@@ -4,8 +4,6 @@ import SettingsEditor
 import SwiftUIKit
 import UIKit
 
-let store = AppStore()
-
 struct AppViewState: Equatable {
   var isShowingData: Bool
   var isPortrait: Bool
@@ -53,37 +51,40 @@ enum AppViewAction: Equatable {
 
 struct AppEnvironment {}
 
+let store = AppStore()
+
 class AppStore {
-  @Published var appState = AppViewState()
+  @Published private var state = AppViewState()
+  @Published var receiveAction: AppViewAction?
+
   let environment = AppEnvironment()
 
-  func send(_ action: AppViewAction) {
-    appReducer(state: &appState, action: action, environment: environment)
-  }
-
-  var dataButtonIconImageName: AnyPublisher<String, Never> {
-    isShowingData
-      .map { $0 ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right" }
-      .eraseToAnyPublisher()
-  }
-
-  var settings: AnyPublisher<SettingsEditorState?, Never> {
-    $appState.map(\.settings)
+  var isShowingData: AnyPublisher<Bool, Never> {
+    $state
       .removeDuplicates()
+      .map(\.isShowingData)
       .eraseToAnyPublisher()
   }
 
   var rings: AnyPublisher<RingsViewState, Never> {
-    $appState.map(\.rings)
+    $state.map(\.rings)
       .removeDuplicates()
       .eraseToAnyPublisher()
   }
 
-  var isShowingData: AnyPublisher<Bool, Never> {
-    $appState
+  var settings: AnyPublisher<SettingsEditorState?, Never> {
+    $state.map(\.settings)
       .removeDuplicates()
-      .map(\.isShowingData)
       .eraseToAnyPublisher()
+  }
+
+  private var cancellables: Set<AnyCancellable> = []
+
+  init() {
+    $receiveAction
+      .compactMap { $0 }
+      .sink { appReducer(state: &self.state, action: $0, environment: self.environment) }
+      .store(in: &cancellables)
   }
 }
 
@@ -94,7 +95,7 @@ func appReducer(state: inout AppViewState, action: AppViewAction, environment _:
 
   case let .settings(action):
     if let _ = state.settings {
-      settingsEditorReducer(state: &state.settings!, action: action, environment: SettingsEditorEnvironment())
+      settingsEditorReducer(state: &state.settings!, action: action, environment: settingsEditorEnvironment)
     }
 
   case .viewTransitionedToPortrait:
@@ -115,6 +116,7 @@ func appReducer(state: inout AppViewState, action: AppViewAction, environment _:
 }
 
 let ringsViewEnvironment = RingsViewEnvironment()
+let settingsEditorEnvironment = SettingsEditorEnvironment()
 
 class AppViewController: UIViewController {
   var cancellables: Set<AnyCancellable> = []
@@ -124,87 +126,73 @@ class AppViewController: UIViewController {
 
     view.tintColor = .systemRed
 
-    let toolbar = makeToolbar(imageName: store.dataButtonIconImageName, parentView: view)
-      .moveTo(view) { toolbar, parentView in
-        toolbar.topAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.topAnchor)
-        toolbar.leadingAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.leadingAnchor)
-        toolbar.trailingAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.trailingAnchor)
-        toolbar.heightAnchor.constraint(equalToConstant: 44)
-      }
+    // Configure top toolbar
 
-    let bottomMenu = makeMenuButton()
-      .moveTo(view) { bottomMenu, parentView in
-        bottomMenu.centerXAnchor.constraint(equalTo: parentView.centerXAnchor)
-        bottomMenu.bottomAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.bottomAnchor)
-          .reactive(store.isShowingData.map { $0 ? 88 : 0 }.eraseToAnyPublisher())
-      }
-
-    if #available(iOS 14, *) {
-      bottomMenu.menu = demoMenu
-      bottomMenu.showsMenuAsPrimaryAction = true
-    } else {
-      bottomMenu.addTarget(self, action: #selector(didTapMenuButton(sender:)), for: .touchUpInside)
+    view.host(topAppToolbar) { toolbar, host in
+      toolbar.topAnchor.constraint(equalTo: host.safeAreaLayoutGuide.topAnchor)
+      toolbar.leadingAnchor.constraint(equalTo: host.safeAreaLayoutGuide.leadingAnchor)
+      toolbar.trailingAnchor.constraint(equalTo: host.safeAreaLayoutGuide.trailingAnchor)
+      toolbar.heightAnchor.constraint(equalToConstant: 44)
     }
 
-    let tabBar = UITabBar()
-    tabBar.items = [
-      UITabBarItem(title: "Today", image: UIImage(systemName: "star.fill"), tag: 0),
-      UITabBarItem(title: "Tasks", image: UIImage(systemName: "list.dash"), tag: 1),
-      UITabBarItem(title: "Charts", image: UIImage(systemName: "chart.pie.fill"), tag: 2),
-    ]
+    // Configure bottom menu popup
 
-    tabBar.moveTo(view) { tabBar, _ in
-      tabBar.leadingAnchor.constraint(equalTo: view.leadingAnchor)
-      tabBar.trailingAnchor.constraint(equalTo: view.trailingAnchor)
-      tabBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: 200)
+    view.host(bottomMenuPopup) { popup, host in
+      popup.centerXAnchor.constraint(equalTo: host.centerXAnchor)
+      popup.bottomAnchor.constraint(equalTo: host.safeAreaLayoutGuide.bottomAnchor)
+        .reactive(store.isShowingData.map { $0 ? 88 : -20 }.eraseToAnyPublisher())
+    }
+
+    // Configure tab bar
+
+    view.host(tabBar) { tabBar, host in
+      tabBar.leadingAnchor.constraint(equalTo: host.leadingAnchor)
+      tabBar.trailingAnchor.constraint(equalTo: host.trailingAnchor)
+      tabBar.bottomAnchor.constraint(equalTo: host.safeAreaLayoutGuide.bottomAnchor)
         .reactive(store.isShowingData.map { $0 ? 0 : 200 }.eraseToAnyPublisher())
     }
 
-    store.send(view.isPortrait
+    store.receiveAction = view.isPortrait
       ? .viewTransitionedToPortrait
-      : .viewTransitionedToLandscape)
+      : .viewTransitionedToLandscape
 
-    let ringsInput = store.rings
+    // Configure rings view
 
-    let ringsView = RingsView(input: ringsInput)
-      .moveTo(view) { ringsView, parentView in
-        ringsView.leadingAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.leadingAnchor)
-        ringsView.trailingAnchor.constraint(equalTo: parentView.safeAreaLayoutGuide.trailingAnchor)
-        ringsView.topAnchor.constraint(equalTo: toolbar.bottomAnchor)
-        ringsView.bottomAnchor.constraint(equalTo: bottomMenu.topAnchor, constant: 0)
-          .reactive(store.isShowingData.map { $0 ? nil : 0 }.eraseToAnyPublisher())
-        ringsView.heightAnchor.constraint(equalToConstant: 150)
-          .reactive(store.isShowingData.map { $0 ? 150 : nil }.eraseToAnyPublisher())
-      }
+    view.host(ringsView) { rings, host in
+      rings.leadingAnchor.constraint(equalTo: host.safeAreaLayoutGuide.leadingAnchor)
+        .reactive(store.isShowingData.map { $0 ? 20 : 0 }.eraseToAnyPublisher())
+      rings.trailingAnchor.constraint(equalTo: host.safeAreaLayoutGuide.trailingAnchor)
+        .reactive(store.isShowingData.map { $0 ? -20 : 0 }.eraseToAnyPublisher())
+      rings.topAnchor.constraint(equalTo: topAppToolbar.bottomAnchor, constant: 0)
+      rings.bottomAnchor.constraint(equalTo: bottomMenuPopup.topAnchor)
+        .reactive(store.isShowingData.map { $0 ? nil : -20 }.eraseToAnyPublisher())
+      rings.heightAnchor.constraint(equalToConstant: 150)
+        .reactive(store.isShowingData.map { $0 ? 150 : nil }.eraseToAnyPublisher())
+    }
 
-    ringsView.output
-      .sink { action in
-        store.send(.rings(action))
-      }
-      .store(in: &cancellables)
+    // Configure settings editor
 
-    store.$appState.map(\.settings)
+    store.settings
       .filter { $0 != nil }
       .sink { _ in
         if self.presentedViewController == nil {
           let filteredSettings = store.settings.filter { $0 != nil }.map { $0! }.eraseToAnyPublisher()
           let editor = SettingsEditor(state: filteredSettings)
-          editor.onDismiss = { store.send(.settingsEditorDismissed) }
+          editor.onDismiss = { store.receiveAction = .settingsEditorDismissed }
           self.present(editor, animated: true)
 
           (editor.viewControllers.first)?
-            .navigationBarItems(leading: { BarButtonItem(.cancel) { store.send(.settingsEditorDismissed) } })
-            .navigationBarItems(trailing: { BarButtonItem(.done) { store.send(.settingsEditorDismissed) } })
+            .navigationBarItems(leading: { BarButtonItem(.cancel) { store.receiveAction = .settingsEditorDismissed } })
+            .navigationBarItems(trailing: { BarButtonItem(.done) { store.receiveAction = .settingsEditorDismissed } })
 
-          editor.actions.sink { action in
-            store.send(.settings(action))
-          }
-          .store(in: &self.cancellables)
+          editor.sentActions
+            .map(AppViewAction.settings)
+            .assign(to: &store.$receiveAction)
         }
       }
       .store(in: &cancellables)
 
-    store.$appState.map(\.settings)
+    store.settings
       .filter { $0 == nil }
       .sink { _ in
         if self.presentedViewController is SettingsEditor {
@@ -213,96 +201,130 @@ class AppViewController: UIViewController {
       }
       .store(in: &cancellables)
 
-    let segmentedControl = UISegmentedControl(items: [
-      UIAction(title: "Period") { _ in },
-      UIAction(title: "Session") { _ in },
-      UIAction(title: "Target") { _ in },
-    ])
+    // Configure segmented control
+
+    segmentedControl
       .moveTo(view) { control, parent in
-        control.leadingAnchor.constraint(equalTo: parent.safeAreaLayoutGuide.leadingAnchor)
-        control.trailingAnchor.constraint(equalTo: parent.safeAreaLayoutGuide.trailingAnchor)
+        control.leadingAnchor.constraint(equalTo: parent.safeAreaLayoutGuide.leadingAnchor, constant: 10)
+        control.trailingAnchor.constraint(equalTo: parent.safeAreaLayoutGuide.trailingAnchor, constant: -10)
         control.topAnchor.constraint(equalTo: ringsView.bottomAnchor, constant: 10)
       }
-
-    store.$appState.sink { state in
-      segmentedControl.alpha = state.isShowingData ? 1.0 : 0.0
-      segmentedControl.selectedSegmentIndex = 0
-    }
-    .store(in: &cancellables)
   }
 
-  var demoMenu: UIMenu {
+  private lazy var ringsView: RingsView = {
+    let rings = RingsView(input: store.rings)
+
+    rings.sentActions
+      .map(AppViewAction.rings)
+      .assign(to: &store.$receiveAction)
+
+    return rings
+  }()
+
+  private lazy var topAppToolbar: AppToolbar = {
+    AppToolbar(frame: .zero)
+  }()
+
+  private lazy var bottomMenuPopup: UIButton = {
+    var configuration = UIButton.Configuration.gray()
+    configuration.cornerStyle = .dynamic
+    configuration.baseForegroundColor = UIColor.systemRed
+    configuration.baseBackgroundColor = .clear
+    configuration.buttonSize = .medium
+
+    configuration.titlePadding = 4
+    configuration.titleAlignment = .center
+
+    let button = UIButton(configuration: configuration)
+    button.tintColor = .label
+    button.showsMenuAsPrimaryAction = true
+
+    let popup = button
+
+    store.rings
+      .map(\.arrangement.focus)
+      .map { $0 == .period }
+      .map { $0 ? ("Ready for a break?", UIColor.systemRed) : ("Next break at 2.30 PM", .label) }
+      .sink { [unowned self] in
+        var title = AttributedString($0.0)
+        title.font = UIFont.systemFont(ofSize: 19, weight: .light).rounded()
+        title.foregroundColor = $0.1
+        popup.configuration?.attributedTitle = title
+      }
+      .store(in: &cancellables)
+
+    store.rings
+      .map(\.arrangement.focus)
+      .map { $0 == .period }
+      .map { $0 ? ("You have worked 22 minutes taking 3 breaks so far", UIColor.secondaryLabel) : ("Next break at 2.30PM", .label) }
+      .sink {
+        var title = AttributedString($0.0)
+        title.font = UIFont.systemFont(ofSize: 13, weight: .light)
+        title.foregroundColor = $0.1
+//        bottomMenu.configuration?.attributedSubtitle = title
+      }
+      .store(in: &cancellables)
+
+    popup.menu = demoMenu
+    popup.showsMenuAsPrimaryAction = true
+
+    return popup
+  }()
+
+  private lazy var segmentedControl: UISegmentedControl = {
+    let segmentedControl = UISegmentedControl(items: [UIAction.selectPeriodRing,
+                                                      .selectSessionRing,
+                                                      .selectTargetRing]
+    )
+
+    store.isShowingData
+      .map { $0 ? 1.0 : 0.0 }
+      .assign(to: \.alpha, on: segmentedControl)
+      .store(in: &cancellables)
+
+    store.rings
+      .map(\.arrangement.focus.rawValue)
+      .removeDuplicates()
+      .assign(to: \.selectedSegmentIndex, on: segmentedControl)
+      .store(in: &cancellables)
+
+    return segmentedControl
+  }()
+
+  private lazy var tabBar: UITabBar = {
+    let tabBar = UITabBar()
+    tabBar.items = [
+      UITabBarItem(title: "Today", image: UIImage(systemName: "star.fill"), tag: 0),
+      UITabBarItem(title: "Tasks", image: UIImage(systemName: "list.dash"), tag: 1),
+      UITabBarItem(title: "Charts", image: UIImage(systemName: "chart.pie.fill"), tag: 2),
+    ]
+
+    tabBar.selectedItem = tabBar.items?[0]
+
+    return tabBar
+  }()
+
+  private var demoMenu: UIMenu {
     var menuItems: [UIAction] {
       [
-        UIAction(title: "Start Break", image: UIImage(systemName: "arrow.right"), handler: { _ in
-          //        viewStore.send(.rings(.ringsTapped(.period)))
-        }),
-        UIAction(title: "Skip Break", image: UIImage(systemName: "arrow.right.to.line"), handler: { _ in
-          //        viewStore.send(.rings(.ringsTapped(.period)))
-        }),
-      ].reversed()
+        .startBreak,
+        .skipBreak,
+      ]
+      .reversed()
     }
 
-    return UIMenu(title: "", image: nil, identifier: nil, options: [], children: menuItems)
+    return UIMenu(children: menuItems)
   }
 
   override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
     coordinator.animate { _ in
-      store.send(size.isPortrait
+      store.receiveAction = size.isPortrait
         ? .viewTransitionedToPortrait
-        : .viewTransitionedToLandscape)
+        : .viewTransitionedToLandscape
     }
 
     super.viewWillTransition(to: size, with: coordinator)
   }
-
-  @objc func didTapMenuButton(sender _: UIButton) {
-    let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-
-    alert.addAction(UIAlertAction(title: "Start Break?", style: .default, handler: { _ in }))
-    alert.addAction(UIAlertAction(title: "Skip Break?", style: .default, handler: { _ in }))
-    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in }))
-
-    present(alert, animated: true)
-  }
-}
-
-private func makeToolbar(imageName: AnyPublisher<String, Never>, parentView: UIView) -> UIStackView {
-  let settingsButton = Button(imageSystemName: "gear") {
-    store.send(.showSettingsEditorButtonTapped)
-  }
-
-  let dataButton = Button(imageSystemName: imageName) {
-    parentView.setNeedsLayout()
-
-    UIView.animate(withDuration: 0.35,
-                   delay: 0.0,
-                   usingSpringWithDamping: 0.8,
-                   initialSpringVelocity: 0.3,
-                   options: [.allowUserInteraction]) {
-      store.send(.showDataButtonTapped)
-      parentView.layoutIfNeeded()
-    }
-  }
-
-  dataButton.transform = CGAffineTransform(rotationAngle: 90 * .pi / 180)
-  settingsButton.widthAnchor.constraint(equalToConstant: 44).isActive = true
-  dataButton.widthAnchor.constraint(equalToConstant: 44).isActive = true
-
-  let toolbar = HStack {
-    settingsButton
-    dataButton
-  }
-
-  return toolbar
-}
-
-func makeMenuButton() -> UIButton {
-  let button = UIButton(type: .roundedRect)
-  button.setTitle("Ready for a break?", for: .normal)
-  button.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .light).rounded()
-
-  return button
 }
 
 extension UIFont {
@@ -312,5 +334,98 @@ extension UIFont {
     }
 
     return UIFont(descriptor: descriptor, size: pointSize)
+  }
+}
+
+extension UIAction {
+  static var startBreak: UIAction {
+    UIAction(title: "Start Break",
+             image: UIImage(systemName: "arrow.right"),
+             discoverabilityTitle: "Start Break") { _ in
+      DispatchQueue.main.async { store.receiveAction = .rings(.ringsTapped(.period)) }
+    }
+  }
+
+  static var skipBreak: UIAction {
+    UIAction(title: "Skip Break",
+             image: UIImage(systemName: "arrow.right.to.line"),
+             discoverabilityTitle: "Skip Break") { _ in
+      DispatchQueue.main.async { store.receiveAction = .rings(.ringsTapped(.period)) }
+    }
+  }
+
+  static var dismissSettingsEditor: UIAction {
+    UIAction(title: "Cancel", discoverabilityTitle: "Cancel") { _ in
+      store.receiveAction = .settingsEditorDismissed
+    }
+  }
+
+  static var selectPeriodRing: UIAction {
+    UIAction(title: "Period", discoverabilityTitle: "Select Period Ring") { _ in
+      store.receiveAction = .rings(.ringSelected(.period))
+    }
+  }
+
+  static var selectSessionRing: UIAction {
+    UIAction(title: "Session", discoverabilityTitle: "Select Session Ring") { _ in
+      store.receiveAction = .rings(.ringSelected(.session))
+    }
+  }
+
+  static var selectTargetRing: UIAction {
+    UIAction(title: "Target", discoverabilityTitle: "Select Target Ring") { _ in
+      store.receiveAction = .rings(.ringSelected(.target))
+    }
+  }
+
+  static var showSettingsEditor: UIAction {
+    UIAction(image: UIImage(systemName: "gear"), discoverabilityTitle: "Show Settings") { _ in
+      store.receiveAction = .showSettingsEditorButtonTapped
+    }
+  }
+
+  static func showUserData(view: UIView) -> UIAction {
+    UIAction(image: UIImage(systemName: "arrow.down.right.and.arrow.up.left"),
+             discoverabilityTitle: "Show User Data") { _ in
+      view.superview?.setNeedsLayout()
+      UIView.animate(withDuration: 0.35,
+                     delay: 0.0,
+                     usingSpringWithDamping: 0.8,
+                     initialSpringVelocity: 0.3,
+                     options: [.allowUserInteraction]) {
+        store.receiveAction = .showDataButtonTapped
+        view.superview?.layoutIfNeeded()
+      }
+    }
+  }
+}
+
+final class AppToolbar: UIView {
+  override init(frame _: CGRect) {
+    super.init(frame: .zero)
+
+    var smallButton = UIButton.Configuration.plain()
+    smallButton.buttonSize = .small
+
+    UIButton(configuration: smallButton, primaryAction: .showSettingsEditor)
+      .moveTo(self) { button, parent in
+        button.leadingAnchor.constraint(equalTo: parent.leadingAnchor, constant: 00)
+        button.topAnchor.constraint(equalTo: parent.topAnchor)
+        button.bottomAnchor.constraint(equalTo: parent.bottomAnchor)
+      }
+
+    let button = UIButton(configuration: smallButton, primaryAction: .showUserData(view: self))
+      .moveTo(self) { button, parent in
+        button.trailingAnchor.constraint(equalTo: parent.trailingAnchor, constant: -00)
+        button.topAnchor.constraint(equalTo: parent.topAnchor)
+        button.bottomAnchor.constraint(equalTo: parent.bottomAnchor)
+      }
+
+    button.transform = CGAffineTransform(rotationAngle: 90 * .pi / 180)
+  }
+
+  @available(*, unavailable)
+  required init?(coder _: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
   }
 }

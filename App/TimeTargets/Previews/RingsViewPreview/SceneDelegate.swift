@@ -13,7 +13,7 @@ final class RingsViewController: UIViewController {
   override func loadView() {
     view = RingsView(input: ringsViewState.eraseToAnyPublisher())
 
-    (view as! RingsView).output.sink { action in
+    (view as! RingsView).sentActions.sink { action in
       ringsViewReducer(state: &self.ringsViewState.value, action: action, environment: self.environment)
     }
     .store(in: &cancellables)

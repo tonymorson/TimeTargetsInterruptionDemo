@@ -83,7 +83,7 @@ public func settingsEditorReducer(state: inout SettingsEditorState,
 }
 
 public final class SettingsEditor: UINavigationController {
-  public var actions: PassthroughSubject<SettingsEditorAction, Never>
+  public var sentActions: PassthroughSubject<SettingsEditorAction, Never>
 
   public var onDismiss: () -> Void {
     set {
@@ -95,8 +95,8 @@ public final class SettingsEditor: UINavigationController {
   }
 
   public init(state: AnyPublisher<SettingsEditorState, Never>) {
-    actions = PassthroughSubject<SettingsEditorAction, Never>()
-    super.init(rootViewController: SettingsEditorForm(state: state, actions: actions).navigationBarTitle("Settings"))
+    sentActions = PassthroughSubject<SettingsEditorAction, Never>()
+    super.init(rootViewController: SettingsEditorForm(state: state, actions: sentActions).navigationBarTitle("Settings"))
 
     setPrefersLargeTitle(true)
   }

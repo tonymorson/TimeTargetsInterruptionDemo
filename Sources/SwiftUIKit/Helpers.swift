@@ -2,135 +2,6 @@ import Combine
 import Foundation
 import UIKit
 
-public func HStack(spacing: CGFloat = 10, @UIViewBuilder content: () -> [UIView]) -> UIStackView {
-  let view = UIStackView(arrangedSubviews: content())
-
-  view.spacing = spacing
-  view.distribution = .equalSpacing
-
-  return view
-}
-
-@resultBuilder
-public enum UIViewBuilder {
-  public static func buildBlock(_ views: UIView...) -> [UIView] {
-    views
-  }
-}
-
-public class Label: UILabel {
-  var cancellables: [AnyCancellable] = []
-
-  override init(frame: CGRect) {
-    super.init(frame: frame)
-  }
-
-  required init?(coder: NSCoder) {
-    super.init(coder: coder)
-  }
-
-  public init(value: AnyPublisher<String, Never>, alignment: NSTextAlignment? = nil) {
-    super.init(frame: .zero)
-    translatesAutoresizingMaskIntoConstraints = false
-
-    if let alignment = alignment {
-      textAlignment = alignment
-    }
-
-    value.sink { [weak self] text in
-      self?.text = text
-      self?.sizeToFit()
-    }
-    .store(in: &cancellables)
-  }
-}
-
-public class ImageView: UIImageView {
-  weak var cancellable: AnyCancellable?
-
-  override init(frame: CGRect) {
-    super.init(frame: frame)
-  }
-
-  required init?(coder: NSCoder) {
-    super.init(coder: coder)
-  }
-
-  public init(systemName: AnyPublisher<String, Never>) {
-    super.init(frame: .zero)
-    translatesAutoresizingMaskIntoConstraints = false
-
-    contentMode = .scaleAspectFit
-
-    cancellable = systemName.map(UIImage.init(systemName:))
-      .assign(to: \.image, on: self)
-  }
-}
-
-public final class Button: UIButton {
-  var cancellables: [AnyCancellable] = []
-  var callback: () -> Void = {}
-
-  override init(frame: CGRect) {
-    super.init(frame: frame)
-  }
-
-  @available(*, unavailable)
-  required init?(coder _: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-
-  public init(imageSystemName: AnyPublisher<String, Never>, callback: @escaping () -> Void) {
-    self.callback = callback
-
-    super.init(frame: .zero)
-
-    addTarget(self, action: #selector(buttonTapped), for: .touchUpInside)
-
-    imageSystemName.sink { [weak self] in
-      self?.setImage(UIImage(systemName: $0), for: .normal)
-    }
-    .store(in: &cancellables)
-  }
-
-  public init(imageSystemName: String, callback: @escaping () -> Void) {
-    self.callback = callback
-
-    super.init(frame: .zero)
-
-    addTarget(self, action: #selector(buttonTapped), for: .touchUpInside)
-
-    setImage(UIImage(systemName: imageSystemName), for: .normal)
-  }
-
-  @objc func buttonTapped(sender _: UIButton) {
-    callback()
-  }
-}
-
-public class DetailRow: UITableViewCell {
-  private var cancellables: Set<AnyCancellable> = []
-
-  init(reuseIdentifier: String = "", title: String, detail: AnyPublisher<String, Never>, accessory: UITableViewCell.AccessoryType = .none) {
-    super.init(style: .value1, reuseIdentifier: reuseIdentifier)
-
-    textLabel?.text = title
-    accessoryType = accessory
-    detail.assign(to: \.detailValue, on: self)
-      .store(in: &cancellables)
-  }
-
-  @available(*, unavailable)
-  required init?(coder _: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-
-  var detailValue: String {
-    set { detailTextLabel?.text = newValue }
-    get { detailTextLabel?.text ?? "" }
-  }
-}
-
 public extension UIViewController {
   func navigationBarTitle(_ title: String) -> Self {
     self.title = title
@@ -213,6 +84,22 @@ public extension UIView {
 
     NSLayoutConstraint.activate(
       constraints(self, view)
+        .filter { !($0 is ReactiveLayoutConstraint) }
+    )
+
+    return self
+  }
+}
+
+public extension UIView {
+  @discardableResult
+  func host(_ view: UIView, @NSLayoutConstraintsBuilder constraints: (UIView, UIView) -> [NSLayoutConstraint]) -> Self {
+    view.removeFromSuperview()
+    addSubview(view)
+    view.translatesAutoresizingMaskIntoConstraints = false
+
+    NSLayoutConstraint.activate(
+      constraints(view, self)
         .filter { !($0 is ReactiveLayoutConstraint) }
     )
 
