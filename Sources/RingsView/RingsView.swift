@@ -263,7 +263,13 @@ public final class RingsView: UIView {
       let distance = distanceBetween(point: gesture.location(in: focus), and: midPoint)
 
       if distance >= focusInnerRadius, distance < periodOuterRadius {
-        sentActions = .concentricRingsTappedInColoredBandsArea
+        UIView.animate(withDuration: 0.45,
+                       delay: 0.0,
+                       usingSpringWithDamping: 0.5,
+                       initialSpringVelocity: 0.5,
+                       options: [.allowUserInteraction]) {
+          self.sentActions = .concentricRingsTappedInColoredBandsArea
+        }
         return
       }
     }
@@ -702,46 +708,41 @@ private struct ConcentricLayout {
     let detachedPeriodLabelPosition: CGPoint
     let detachedPeriodLabelTransform: CATransform3D
 
+    let detachedPeriodLabelYWhenConcentric = periodCenterY - period.bounds.width / 80
+    let detachedPeriodLabelYWhenAcentric = (periodCenterY + ((period.bounds.width / 4) * settings.scaleFactor)) - (41 * (settings.scaleFactor))
+
     switch settings.focus {
     case .period:
-      let yOffset = period.bounds.width / 80
-
-      detachedPeriodLabelPosition = CGPoint(x: periodCenterX,
-                                            y: periodCenterY - yOffset)
-
-      detachedPeriodLabelTransform = period.transform
+      detachedPeriodLabelPosition = CGPoint(x: periodCenterX, y: detachedPeriodLabelYWhenConcentric)
+      detachedPeriodLabelTransform = CATransform3DMakeScale(settings.scaleFactor, settings.scaleFactor, 0.5)
 
     case .session:
-      let offset = period.bounds.width / 6.5
-      let concentricY = periodCenterY
-      let acentricY = concentricY + offset
-      let y = valueInConcentricRangeAt(concentricity: abs(concentricity),
-                                       concentricMax: acentricY,
-                                       acentricMin: concentricY)
 
-      detachedPeriodLabelPosition = CGPoint(x: periodCenterX, y: y)
-
-      let scale = valueInConcentricRangeAt(concentricity: abs(concentricity),
+      let scale = valueInConcentricRangeAt(concentricity: min(1.0, abs(concentricity)),
                                            concentricMax: 0.38,
                                            acentricMin: settings.scaleFactor)
 
-      detachedPeriodLabelTransform = CATransform3DMakeScale(scale, scale, 0.5)
+      let yPos = valueInConcentricRangeAt(concentricity: min(1.0, abs(concentricity)),
+                                          concentricMax: detachedPeriodLabelYWhenAcentric,
+                                          acentricMin: detachedPeriodLabelYWhenConcentric)
+
+      detachedPeriodLabelPosition = CGPoint(x: periodCenterX, y: yPos)
+      detachedPeriodLabelTransform = CATransform3DScale(CATransform3DMakeScale(scale, scale, 0.5),
+                                                        settings.scaleFactor,
+                                                        settings.scaleFactor,
+                                                        0.5)
 
     case .target:
-      let offset = period.bounds.width / 6.5
-      let concentricY = periodCenterY
-      let acentricY = concentricY + offset
-      let y = valueInConcentricRangeAt(concentricity: abs(concentricity),
-                                       concentricMax: acentricY,
-                                       acentricMin: concentricY)
-
-      detachedPeriodLabelPosition = CGPoint(x: periodCenterX, y: y)
-
-      let scale = valueInConcentricRangeAt(concentricity: abs(concentricity),
+      let scale = valueInConcentricRangeAt(concentricity: min(1.0, abs(concentricity)),
                                            concentricMax: 0.38,
                                            acentricMin: settings.scaleFactor)
 
-      detachedPeriodLabelTransform = CATransform3DMakeScale(scale, scale, 0.5)
+      let yPos = valueInConcentricRangeAt(concentricity: min(1.0, abs(concentricity)),
+                                          concentricMax: detachedPeriodLabelYWhenAcentric,
+                                          acentricMin: detachedPeriodLabelYWhenConcentric)
+
+      detachedPeriodLabelPosition = CGPoint(x: periodCenterX, y: yPos)
+      detachedPeriodLabelTransform = CATransform3DScale(CATransform3DMakeScale(scale, scale, 0.5), settings.scaleFactor, settings.scaleFactor, 0.5)
     }
 
     return .init(bounds: detachedPeriodLabelBounds,
