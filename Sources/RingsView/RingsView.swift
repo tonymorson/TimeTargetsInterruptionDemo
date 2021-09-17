@@ -314,6 +314,7 @@ public final class RingsView: UIView {
         return .target
       }
     }
+
     return nil
   }
 
@@ -547,11 +548,11 @@ private extension RingsView {
 
 extension RingsView: UIGestureRecognizerDelegate {
   public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-    guard panStart == nil else { return true }
-    guard gestureRecognizer == pan else { return true }
-    guard let ring = testRing(for: touch) else { return true }
+    if gestureRecognizer == pan, panStart == nil {
+      guard let ring = testRing(for: touch) else { return false }
+      panStart = (ring, touch.location(in: self))
+    }
 
-    panStart = (ring, touch.location(in: self))
     return true
   }
 
