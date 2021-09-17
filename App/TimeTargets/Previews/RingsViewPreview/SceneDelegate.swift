@@ -4,8 +4,8 @@ import UIKit
 
 final class RingsViewController: UIViewController {
   private var cancellables: Set<AnyCancellable> = []
-  private var savedPortraitArrangement: RingsLayout!
-  private var savedLandscapeArrangement: RingsLayout!
+  private var savedPortraitArrangement: RingsViewLayout!
+  private var savedLandscapeArrangement: RingsViewLayout!
 
   private var environment = RingsViewEnvironment()
   private var ringsViewState = CurrentValueSubject<RingsViewState, Never>(RingsViewState())

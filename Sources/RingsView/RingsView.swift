@@ -3,10 +3,10 @@ import Foundation
 import UIKit
 
 public struct RingsViewState: Equatable {
-  public var arrangement: RingsLayout
+  public var arrangement: RingsViewLayout
   public var content: RingsData
 
-  public init(arrangement: RingsLayout, content: RingsData) {
+  public init(arrangement: RingsViewLayout, content: RingsData) {
     self.arrangement = arrangement
     self.content = content
   }
@@ -318,14 +318,14 @@ public final class RingsView: UIView {
   }
 
   private var savedRingScaleFactor: CGFloat = .zero
-  private var savedConcentricKeyPath: WritableKeyPath<RingsLayout, CGFloat>!
+  private var savedConcentricKeyPath: WritableKeyPath<RingsViewLayout, CGFloat>!
 
   @objc private func onPinch(gesture: UIPinchGestureRecognizer) {
     switch gesture.state {
     case .began:
       savedConcentricKeyPath = state.arrangement.concentricity == 0.0
-        ? \RingsLayout.scaleFactorWhenFullyConcentric
-        : \RingsLayout.scaleFactorWhenFullyAcentric
+        ? \RingsViewLayout.scaleFactorWhenFullyConcentric
+        : \RingsViewLayout.scaleFactorWhenFullyAcentric
 
       savedRingScaleFactor = state.arrangement[keyPath: savedConcentricKeyPath]
 
@@ -636,7 +636,7 @@ func distanceBetween(point: CGPoint, and otherPoint: CGPoint) -> CGFloat {
 private struct ConcentricLayout {
   let bounds: CGRect
   let vertical: Bool
-  let settings: RingsLayout
+  let settings: RingsViewLayout
 
   var captionHeight: CGFloat = 152
   var captionTopPadding: CGFloat { captionHeight / 2.5 }
@@ -818,7 +818,7 @@ private struct ConcentricLayout {
                              acentricMin: 0.0)
   }
 
-  init(vertical: Bool, bounds: CGRect, settings: RingsLayout) {
+  init(vertical: Bool, bounds: CGRect, settings: RingsViewLayout) {
     self.vertical = vertical
     self.bounds = bounds
     self.settings = settings
@@ -861,7 +861,7 @@ private struct ConcentricLayout {
 }
 
 private extension ConcentricLayout {
-  init(bounds: CGRect, settings: RingsLayout) {
+  init(bounds: CGRect, settings: RingsViewLayout) {
     switch settings.acentricAxis {
     case .alwaysVertical:
       self = ConcentricLayout(vertical: true, bounds: bounds, settings: settings)
@@ -984,7 +984,7 @@ private func constrainMinPinchingValueIfNeeded(value: CGFloat) -> CGFloat {
   return value
 }
 
-private extension RingsLayout {
+private extension RingsViewLayout {
   func dragGestureKeyPathFor(bounds: CGRect) -> KeyPath<CGPoint, CGFloat> {
     switch acentricAxis {
     case .alwaysVertical:
@@ -1068,10 +1068,10 @@ final class LabelView: UIView {
 public extension RingsViewState {
   init() {
     content = RingsData()
-    arrangement = RingsLayout(acentricAxis: .alongLongestDimension,
-                              concentricity: 0.0,
-                              focus: .period,
-                              scaleFactorWhenFullyAcentric: 1.0,
-                              scaleFactorWhenFullyConcentric: 1.0)
+    arrangement = RingsViewLayout(acentricAxis: .alongLongestDimension,
+                                  concentricity: 0.0,
+                                  focus: .period,
+                                  scaleFactorWhenFullyAcentric: 1.0,
+                                  scaleFactorWhenFullyConcentric: 1.0)
   }
 }

@@ -5,7 +5,7 @@ public enum AcentricLayoutMode {
   case alongLongestDimension, alwaysVertical, alwaysHorizontal
 }
 
-public struct RingsLayout: Equatable {
+public struct RingsViewLayout: Equatable {
   public var acentricAxis: AcentricLayoutMode
   public var concentricity: CGFloat
   public var focus: RingSemantic

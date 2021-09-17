@@ -5,36 +5,76 @@ import SwiftUIKit
 import UIKit
 
 struct AppViewState: Equatable {
-  var isShowingData: Bool
+  struct RingsArrangement: Equatable {
+    public var acentricAxis: AcentricLayoutMode
+    public var concentricity: CGFloat
+    public var scaleFactorWhenFullyAcentric: CGFloat
+    public var scaleFactorWhenFullyConcentric: CGFloat
+
+    public init(acentricAxis: AcentricLayoutMode,
+                concentricity: CGFloat,
+                scaleFactorWhenFullyAcentric: CGFloat,
+                scaleFactorWhenFullyConcentric: CGFloat)
+    {
+      self.acentricAxis = acentricAxis
+      self.concentricity = concentricity
+      self.scaleFactorWhenFullyAcentric = scaleFactorWhenFullyAcentric
+      self.scaleFactorWhenFullyConcentric = scaleFactorWhenFullyConcentric
+    }
+  }
+
   var isPortrait: Bool
-  var ringsLayoutPortrait: RingsLayout
-  var ringsLayoutLandscape: RingsLayout
+  var isShowingData: Bool
+  var ringsArrangementPortrait: RingsArrangement
+  var ringsArrangementLandscape: RingsArrangement
+  var ringsArrangementDataMode: RingsArrangement
   var ringsContent: RingsData
+  var ringFocus: RingSemantic
   var settings: SettingsEditorState?
 
   init() {
     isPortrait = true
     isShowingData = false
-    ringsLayoutPortrait = RingsLayout(acentricAxis: .alongLongestDimension, concentricity: 0.0, focus: .period, scaleFactorWhenFullyAcentric: 1.0, scaleFactorWhenFullyConcentric: 1.0)
-    ringsLayoutLandscape = RingsLayout(acentricAxis: .alongLongestDimension, concentricity: -1.0, focus: .period, scaleFactorWhenFullyAcentric: 1.0, scaleFactorWhenFullyConcentric: 1.0)
+    ringsArrangementPortrait = .init(concentricity: 0.0)
+    ringsArrangementLandscape = .init(concentricity: 1.0)
+    ringsArrangementDataMode = .init(concentricity: 1.0)
     ringsContent = .init()
+    ringFocus = .period
     settings = nil
+  }
+
+  var ringsViewLayoutPortrait: RingsViewLayout {
+    RingsViewLayout(layout: ringsArrangementPortrait, focus: ringFocus)
+  }
+
+  var ringsViewLayoutLandscape: RingsViewLayout {
+    RingsViewLayout(layout: ringsArrangementLandscape, focus: ringFocus)
+  }
+
+  var ringsViewLayoutDataMode: RingsViewLayout {
+    RingsViewLayout(layout: ringsArrangementDataMode, focus: ringFocus)
   }
 
   var rings: RingsViewState {
     get {
-      isPortrait
-        ? .init(arrangement: ringsLayoutPortrait, content: ringsContent)
-        : .init(arrangement: ringsLayoutLandscape, content: ringsContent)
-    }
-    set {
-      if isPortrait {
-        ringsLayoutPortrait = newValue.arrangement
-      } else {
-        ringsLayoutLandscape = newValue.arrangement
+      if isShowingData {
+        return .init(arrangement: ringsViewLayoutDataMode, content: ringsContent)
       }
 
+      return isPortrait
+        ? .init(arrangement: ringsViewLayoutPortrait, content: ringsContent)
+        : .init(arrangement: ringsViewLayoutLandscape, content: ringsContent)
+    }
+    set {
+      if isShowingData {
+        ringsArrangementDataMode = RingsArrangement(layout: newValue.arrangement)
+      } else if isPortrait {
+        ringsArrangementPortrait = RingsArrangement(layout: newValue.arrangement)
+      } else {
+        ringsArrangementLandscape = RingsArrangement(layout: newValue.arrangement)
+      }
       ringsContent = newValue.content
+      ringFocus = newValue.arrangement.focus
     }
   }
 }
@@ -342,7 +382,7 @@ extension UIAction {
     UIAction(title: "Start Break",
              image: UIImage(systemName: "arrow.right"),
              discoverabilityTitle: "Start Break") { _ in
-      DispatchQueue.main.async { store.receiveAction = .rings(.ringsTapped(.period)) }
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { store.receiveAction = .rings(.ringsTapped(.period)) }
     }
   }
 
@@ -350,7 +390,7 @@ extension UIAction {
     UIAction(title: "Skip Break",
              image: UIImage(systemName: "arrow.right.to.line"),
              discoverabilityTitle: "Skip Break") { _ in
-      DispatchQueue.main.async { store.receiveAction = .rings(.ringsTapped(.period)) }
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { store.receiveAction = .rings(.ringsTapped(.period)) }
     }
   }
 
@@ -388,10 +428,10 @@ extension UIAction {
     UIAction(image: UIImage(systemName: "arrow.down.right.and.arrow.up.left"),
              discoverabilityTitle: "Show User Data") { _ in
       view.superview?.setNeedsLayout()
-      UIView.animate(withDuration: 0.35,
+      UIView.animate(withDuration: 0.4,
                      delay: 0.0,
-                     usingSpringWithDamping: 0.8,
-                     initialSpringVelocity: 0.3,
+                     usingSpringWithDamping: 0.9,
+                     initialSpringVelocity: 0.7,
                      options: [.allowUserInteraction]) {
         store.receiveAction = .showDataButtonTapped
         view.superview?.layoutIfNeeded()
@@ -427,5 +467,31 @@ final class AppToolbar: UIView {
   @available(*, unavailable)
   required init?(coder _: NSCoder) {
     fatalError("init(coder:) has not been implemented")
+  }
+}
+
+extension AppViewState.RingsArrangement {
+  init(layout: RingsViewLayout) {
+    acentricAxis = layout.acentricAxis
+    concentricity = layout.concentricity
+    scaleFactorWhenFullyAcentric = layout.scaleFactorWhenFullyAcentric
+    scaleFactorWhenFullyConcentric = layout.scaleFactorWhenFullyConcentric
+  }
+
+  init(concentricity: CGFloat) {
+    acentricAxis = .alongLongestDimension
+    self.concentricity = concentricity
+    scaleFactorWhenFullyAcentric = 1.0
+    scaleFactorWhenFullyConcentric = 1.0
+  }
+}
+
+extension RingsViewLayout {
+  init(layout: AppViewState.RingsArrangement, focus: RingSemantic) {
+    self.init(acentricAxis: layout.acentricAxis,
+              concentricity: layout.concentricity,
+              focus: focus,
+              scaleFactorWhenFullyAcentric: layout.scaleFactorWhenFullyAcentric,
+              scaleFactorWhenFullyConcentric: layout.scaleFactorWhenFullyConcentric)
   }
 }
