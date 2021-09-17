@@ -108,6 +108,12 @@ class AppStore {
       .eraseToAnyPublisher()
   }
 
+  var ringsFocus: AnyPublisher<RingSemantic, Never> {
+    $state.map(\.rings.arrangement.focus)
+      .removeDuplicates()
+      .eraseToAnyPublisher()
+  }
+
   var settings: AnyPublisher<SettingsEditorState?, Never> {
     $state.map(\.settings)
       .removeDuplicates()
@@ -278,8 +284,7 @@ class AppViewController: UIViewController {
 
     let popup = button
 
-    store.rings
-      .map(\.arrangement.focus)
+    store.ringsFocus
       .map { $0 == .period }
       .map { $0 ? ("Ready for a break?", UIColor.systemRed) : ("Next break at 2.30 PM", .label) }
       .sink { [unowned self] in
@@ -290,8 +295,7 @@ class AppViewController: UIViewController {
       }
       .store(in: &cancellables)
 
-    store.rings
-      .map(\.arrangement.focus)
+    store.ringsFocus
       .map { $0 == .period }
       .map { $0 ? ("You have worked 22 minutes taking 3 breaks so far", UIColor.secondaryLabel) : ("Next break at 2.30PM", .label) }
       .sink {
@@ -319,9 +323,9 @@ class AppViewController: UIViewController {
       .assign(to: \.alpha, on: segmentedControl)
       .store(in: &cancellables)
 
-    store.rings
-      .map(\.arrangement.focus.rawValue)
+    store.ringsFocus
       .removeDuplicates()
+      .map(\.rawValue)
       .assign(to: \.selectedSegmentIndex, on: segmentedControl)
       .store(in: &cancellables)
 
