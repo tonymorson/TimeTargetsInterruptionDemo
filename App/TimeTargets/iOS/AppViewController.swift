@@ -254,7 +254,8 @@ class AppViewController: UIViewController {
   private lazy var ringsView: RingsView = {
     let rings = RingsView(input: store.rings)
 
-    rings.sentActions
+    rings.$sentActions
+      .compactMap { $0 }
       .map(AppViewAction.rings)
       .assign(to: &store.$receiveAction)
 
