@@ -446,14 +446,14 @@ final class AppToolbar: UIView {
 
     UIButton(configuration: smallButton, primaryAction: .showSettingsEditor)
       .moveTo(self) { button, parent in
-        button.leadingAnchor.constraint(equalTo: parent.leadingAnchor, constant: 00)
+        button.leadingAnchor.constraint(equalTo: parent.leadingAnchor)
         button.topAnchor.constraint(equalTo: parent.topAnchor)
         button.bottomAnchor.constraint(equalTo: parent.bottomAnchor)
       }
 
     let button = UIButton(configuration: smallButton, primaryAction: .showUserData(view: self))
       .moveTo(self) { button, parent in
-        button.trailingAnchor.constraint(equalTo: parent.trailingAnchor, constant: -00)
+        button.trailingAnchor.constraint(equalTo: parent.trailingAnchor)
         button.topAnchor.constraint(equalTo: parent.topAnchor)
         button.bottomAnchor.constraint(equalTo: parent.bottomAnchor)
       }
