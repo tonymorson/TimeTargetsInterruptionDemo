@@ -410,7 +410,7 @@ extension UIAction {
   }
 
   static var selectTargetRing: UIAction {
-    UIAction(title: "Target", discoverabilityTitle: "Select Target Ring") { _ in
+    UIAction(title: "Target", discoverabilityTitle: "Select Today Ring") { _ in
       store.receiveAction = .rings(.ringSelected(.target))
     }
   }
