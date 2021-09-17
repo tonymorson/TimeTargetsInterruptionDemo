@@ -20,7 +20,7 @@ public struct RingsData: Equatable {
 
   public var target = RingData(color: .yellow,
                                trackColor: .systemGray4,
-                               label: .init(title: ("TODAY'S", "PROGRESS"),
+                               label: .init(title: ("TODAY'S", "TARGET"),
                                             value: "2%",
                                             subtitle: "completed",
                                             caption: "5 HOURS"),
