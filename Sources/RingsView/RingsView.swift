@@ -263,13 +263,7 @@ public final class RingsView: UIView {
       let distance = distanceBetween(point: gesture.location(in: focus), and: midPoint)
 
       if distance >= focusInnerRadius, distance < periodOuterRadius {
-        UIView.animate(withDuration: 0.45,
-                       delay: 0.0,
-                       usingSpringWithDamping: 0.5,
-                       initialSpringVelocity: 0.5,
-                       options: [.allowUserInteraction]) {
-          self.sentActions = .concentricRingsTappedInColoredBandsArea
-        }
+        sentActions = .concentricRingsTappedInColoredBandsArea
         return
       }
     }
