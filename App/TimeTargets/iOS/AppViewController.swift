@@ -27,7 +27,6 @@ struct AppViewState: Equatable {
   var isShowingData: Bool
   var ringsArrangementPortrait: RingsArrangement
   var ringsArrangementLandscape: RingsArrangement
-  var ringsArrangementDataMode: RingsArrangement
   var ringsContent: RingsData
   var ringFocus: RingSemantic
   var settings: SettingsEditorState?
@@ -37,7 +36,6 @@ struct AppViewState: Equatable {
     isShowingData = false
     ringsArrangementPortrait = .init(concentricity: 0.0)
     ringsArrangementLandscape = .init(concentricity: 1.0)
-    ringsArrangementDataMode = .init(concentricity: 1.0)
     ringsContent = .init()
     ringFocus = .period
     settings = nil
@@ -52,7 +50,7 @@ struct AppViewState: Equatable {
   }
 
   var ringsViewLayoutDataMode: RingsViewLayout {
-    RingsViewLayout(layout: ringsArrangementDataMode, focus: ringFocus)
+    RingsViewLayout(layout: isPortrait ? ringsArrangementPortrait : ringsArrangementLandscape, focus: ringFocus)
   }
 
   var rings: RingsViewState {
@@ -66,9 +64,7 @@ struct AppViewState: Equatable {
         : .init(arrangement: ringsViewLayoutLandscape, content: ringsContent)
     }
     set {
-      if isShowingData {
-        ringsArrangementDataMode = RingsArrangement(layout: newValue.arrangement)
-      } else if isPortrait {
+      if isPortrait {
         ringsArrangementPortrait = RingsArrangement(layout: newValue.arrangement)
       } else {
         ringsArrangementLandscape = RingsArrangement(layout: newValue.arrangement)
