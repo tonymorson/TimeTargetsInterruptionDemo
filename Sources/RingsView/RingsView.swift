@@ -429,7 +429,19 @@ public final class RingsView: UIView {
       let gestureKeyPath = state.arrangement.dragGestureKeyPathFor(bounds: bounds)
       let dragAmount = -gesture.translation(in: self)[keyPath: gestureKeyPath] * dragDirectionModifier
       let concentricDelta = dragAmount / dimension
-      let concentricity = concentricDelta + panStartConcentricity
+      var concentricity = concentricDelta + panStartConcentricity
+
+      if concentricity > 1.0 {
+        var overshoot = concentricity - 1.0
+        overshoot = overshoot / 3.5
+        concentricity = 1.0 + overshoot
+      }
+
+      if concentricity < -1.0 {
+        var overshoot = concentricity + 1.0
+        overshoot = overshoot / 3.5
+        concentricity = -1.0 + overshoot
+      }
 
       sentActions = .ringConcentricityDragged(concentricity: concentricity)
 
