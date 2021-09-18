@@ -17,6 +17,10 @@ public extension UIColor {
     applying(lightness: 0.35)
   }
 
+  var slightyDarker: UIColor? {
+    applying(lightness: 0.50)
+  }
+
   func applying(lightness value: CGFloat) -> UIColor? {
     guard let hsl = hsl else { return nil }
     return UIColor(hue: hsl.hue, saturation: hsl.saturation, lightness: hsl.lightness * value, alpha: hsl.alpha)

@@ -227,6 +227,20 @@ public final class RingsView: UIView {
     focus.details = self[keyPath: focusRingKeyPath].details
     focusTrack.color = focus.details.color.darker!
 
+    if focus.details.color == UIColor.systemGray2 {
+      switch state.arrangement.focus {
+      case .period: focus.details.color = .systemRed.slightyDarker!
+      case .session: focus.details.color = .systemGreen.slightyDarker!
+      case .target: focus.details.color = .systemYellow.slightyDarker!
+      }
+
+      switch state.arrangement.focus {
+      case .period: focusTrack.color = .systemRed.darker!.slightyDarker!
+      case .session: focusTrack.color = .systemGreen.darker!.slightyDarker!
+      case .target: focusTrack.color = .systemYellow.darker!.slightyDarker!
+      }
+    }
+
 //    let shadowRadius = bounds.width / 85
 
 //    focusTrack.layer.shadowColor = self[keyPath: focusRingKeyPath].color.darker!.darker!.cgColor
