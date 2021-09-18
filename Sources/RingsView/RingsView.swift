@@ -347,21 +347,21 @@ public final class RingsView: UIView {
 
       savedRingScaleFactor = state.arrangement[keyPath: savedConcentricKeyPath]
 
-      let newValue = constrainMinPinchingValueIfNeeded(value: gesture.scale * savedRingScaleFactor)
+      let newValue = restrain(value: gesture.scale * savedRingScaleFactor, in: 0.55 ... 0.999999, factor: 2.2)
 
       sentActions = state.arrangement.concentricity == 0.0
         ? .concentricRingsPinched(scaleFactor: newValue)
         : .acentricRingsPinched(scaleFactor: newValue)
 
     case .changed:
-      let newValue = constrainMinPinchingValueIfNeeded(value: gesture.scale * savedRingScaleFactor)
+      let newValue = restrain(value: gesture.scale * savedRingScaleFactor, in: 0.55 ... 0.999999, factor: 2.2)
 
       sentActions = state.arrangement.concentricity == 0.0
         ? .concentricRingsPinched(scaleFactor: newValue)
         : .acentricRingsPinched(scaleFactor: newValue)
 
     case .ended:
-      let pinchScale = constrainMinPinchingValueIfNeeded(value: gesture.scale * savedRingScaleFactor)
+      let pinchScale = restrain(value: gesture.scale * savedRingScaleFactor, in: 0.55 ... 0.999999, factor: 2.2)
       let clampedScale = max(0.55, min(1.0, pinchScale))
 
       UIView.animate(withDuration: 0.45,
@@ -429,19 +429,9 @@ public final class RingsView: UIView {
       let gestureKeyPath = state.arrangement.dragGestureKeyPathFor(bounds: bounds)
       let dragAmount = -gesture.translation(in: self)[keyPath: gestureKeyPath] * dragDirectionModifier
       let concentricDelta = dragAmount / dimension
-      var concentricity = concentricDelta + panStartConcentricity
-
-      if concentricity > 1.0 {
-        var overshoot = concentricity - 1.0
-        overshoot = overshoot / 3.5
-        concentricity = 1.0 + overshoot
-      }
-
-      if concentricity < -1.0 {
-        var overshoot = concentricity + 1.0
-        overshoot = overshoot / 3.5
-        concentricity = -1.0 + overshoot
-      }
+      let concentricity = restrain(value: concentricDelta + panStartConcentricity,
+                                   in: -1.0 ... 1.0,
+                                   factor: 118.4)
 
       sentActions = .ringConcentricityDragged(concentricity: concentricity)
 
@@ -974,28 +964,6 @@ final class RingTextView: UIView {
   }
 }
 
-private func constrainMinPinchingValueIfNeeded(value: CGFloat) -> CGFloat {
-  if value > 1 {
-    let left = 1.0
-    let right = value - left
-
-    let resistance = right / (1 + (right * 2.2))
-
-    return left + resistance
-  }
-
-  if value <= 0.55 {
-    let left = 0.55
-    let right = left - value // - left
-
-    let resistance = -right / (1 + (right * 2.2))
-
-    return left + resistance
-  }
-
-  return value
-}
-
 private extension RingsViewLayout {
   func dragGestureKeyPathFor(bounds: CGRect) -> KeyPath<CGPoint, CGFloat> {
     switch acentricAxis {
@@ -1096,4 +1064,22 @@ public func detachedLabelAnimation(animation: @escaping () -> Void) {
                  options: [.allowUserInteraction]) {
     animation()
   }
+}
+
+func restrain(value: CGFloat, in range: ClosedRange<CGFloat>, factor _: CGFloat) -> CGFloat {
+  if value > range.upperBound {
+    let overShoot = value - range.upperBound
+    let resistance = overShoot / (1 + (overShoot * 2.2))
+
+    return range.upperBound + resistance
+  }
+
+  if value <= range.lowerBound {
+    let overShoot = range.lowerBound - value
+    let resistance = -overShoot / (1 + (overShoot * 2.2))
+
+    return range.lowerBound + resistance
+  }
+
+  return value
 }
