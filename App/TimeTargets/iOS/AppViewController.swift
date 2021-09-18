@@ -120,6 +120,33 @@ class AppStore {
       .eraseToAnyPublisher()
   }
 
+  var bottomMenuAlpha: AnyPublisher<CGFloat, Never> {
+    $state.map(\.rings)
+      .removeDuplicates()
+      .map {
+        let overReach = max(abs($0.arrangement.concentricity), abs($0.arrangement.scaleFactor))
+
+        return abs(overReach) <= 1.0
+          ? 1.0
+          : 1 - (abs(1 - abs(overReach)) * 3)
+      }
+      .eraseToAnyPublisher()
+  }
+
+  var bottomMenuOffsetConstraint: AnyPublisher<CGFloat?, Never> {
+    $state.map { (state: AppViewState) -> CGFloat? in
+      let overReach = max(abs(state.rings.arrangement.concentricity), abs(state.rings.arrangement.scaleFactor))
+
+      return state.isShowingData
+        ? 88
+        : -20 + (overReach > 1.0
+          ? (overReach - 1.0) * (state.isPortrait ? 180.0 : 15.0)
+          : 0)
+    }
+    .removeDuplicates()
+    .eraseToAnyPublisher()
+  }
+
   private var cancellables: Set<AnyCancellable> = []
 
   init() {
@@ -182,7 +209,7 @@ class AppViewController: UIViewController {
     view.host(bottomMenuPopup) { popup, host in
       popup.centerXAnchor.constraint(equalTo: host.centerXAnchor)
       popup.bottomAnchor.constraint(equalTo: host.safeAreaLayoutGuide.bottomAnchor)
-        .reactive(store.isShowingData.map { $0 ? 88 : -20 }.eraseToAnyPublisher())
+        .reactive(store.bottomMenuOffsetConstraint)
     }
 
     // Configure tab bar
@@ -293,6 +320,11 @@ class AppViewController: UIViewController {
         title.foregroundColor = $0.1
         popup.configuration?.attributedTitle = title
       }
+      .store(in: &cancellables)
+
+    store
+      .bottomMenuAlpha
+      .assign(to: \.alpha, on: button)
       .store(in: &cancellables)
 
     store.ringsFocus
