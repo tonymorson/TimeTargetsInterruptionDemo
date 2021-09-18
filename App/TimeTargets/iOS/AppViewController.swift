@@ -403,19 +403,25 @@ extension UIAction {
 
   static var selectPeriodRing: UIAction {
     UIAction(title: "Period", discoverabilityTitle: "Select Period Ring") { _ in
-      store.receiveAction = .rings(.ringSelected(.period))
+      detachedLabelAnimation {
+        store.receiveAction = .rings(.ringSelected(.period))
+      }
     }
   }
 
   static var selectSessionRing: UIAction {
     UIAction(title: "Session", discoverabilityTitle: "Select Session Ring") { _ in
-      store.receiveAction = .rings(.ringSelected(.session))
+      detachedLabelAnimation {
+        store.receiveAction = .rings(.ringSelected(.session))
+      }
     }
   }
 
   static var selectTargetRing: UIAction {
     UIAction(title: "Target", discoverabilityTitle: "Select Today Ring") { _ in
-      store.receiveAction = .rings(.ringSelected(.target))
+      detachedLabelAnimation {
+        store.receiveAction = .rings(.ringSelected(.target))
+      }
     }
   }
 

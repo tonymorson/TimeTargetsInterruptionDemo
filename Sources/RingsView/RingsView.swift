@@ -263,7 +263,10 @@ public final class RingsView: UIView {
       let distance = distanceBetween(point: gesture.location(in: focus), and: midPoint)
 
       if distance >= focusInnerRadius, distance < periodOuterRadius {
-        sentActions = .concentricRingsTappedInColoredBandsArea
+        detachedLabelAnimation {
+          self.sentActions = .concentricRingsTappedInColoredBandsArea
+        }
+
         return
       }
     }
@@ -1060,5 +1063,15 @@ public extension RingsViewState {
                                   focus: .period,
                                   scaleFactorWhenFullyAcentric: 1.0,
                                   scaleFactorWhenFullyConcentric: 1.0)
+  }
+}
+
+public func detachedLabelAnimation(animation: @escaping () -> Void) {
+  UIView.animate(withDuration: 0.55,
+                 delay: 0.0,
+                 usingSpringWithDamping: 0.65,
+                 initialSpringVelocity: 0.45,
+                 options: [.allowUserInteraction]) {
+    animation()
   }
 }
