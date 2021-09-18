@@ -376,20 +376,16 @@ public final class RingsView: UIView {
     switch panStart {
     case let .some(value) where value.0 == .period:
       dragDirectionModifier = 1
+
     case let .some(value) where value.0 == .session && layoutDirection == .vertical:
-      if state.arrangement.concentricity > 0 {
-        dragDirectionModifier = value.1.y - 20 > bounds.height / 2 ? -1 : 1
-      } else {
-        dragDirectionModifier = value.1.y + 50 > bounds.height / 2 ? 1 : -1
-      }
+      dragDirectionModifier = value.1.y - 20 > bounds.height / 2 ? -1 : 1
+
     case let .some(value) where value.0 == .session && layoutDirection == .horizontal:
-      if state.arrangement.concentricity > 0 {
-        dragDirectionModifier = value.1.x > bounds.width / 2 ? -1 : 1
-      } else {
-        dragDirectionModifier = value.1.x > bounds.width / 2 ? 1 : -1
-      }
+      dragDirectionModifier = value.1.x > bounds.width / 2 ? -1 : 1
+
     case let .some(value) where value.0 == .target:
       dragDirectionModifier = -1
+
     default:
       panStart = nil
       return
