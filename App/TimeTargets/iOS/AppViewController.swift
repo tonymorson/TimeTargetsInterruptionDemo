@@ -121,15 +121,21 @@ class AppStore {
   }
 
   var bottomMenuAlpha: AnyPublisher<CGFloat, Never> {
-    $state.map(\.rings)
+    $state
+      .map(\.rings.arrangement.overReach)
       .removeDuplicates()
-      .map {
-        let overReach = max(abs($0.arrangement.concentricity), abs($0.arrangement.scaleFactor))
-
-        return abs(overReach) <= 1.0
+      .map { overReach in
+        abs(overReach) <= 1.0
           ? 1.0
           : 1 - (abs(1 - abs(overReach)) * 3)
       }
+      .eraseToAnyPublisher()
+  }
+
+  var isPortrait: AnyPublisher<Bool, Never> {
+    $state
+      .map(\.isPortrait)
+      .removeDuplicates()
       .eraseToAnyPublisher()
   }
 
@@ -139,7 +145,7 @@ class AppStore {
 
       return state.isShowingData
         ? 88
-        : -20 + (overReach > 1.0
+        : (overReach > 1.0
           ? (overReach - 1.0) * (state.isPortrait ? 180.0 : 15.0)
           : 0)
     }
@@ -209,7 +215,6 @@ class AppViewController: UIViewController {
     view.host(bottomMenuPopup) { popup, host in
       popup.centerXAnchor.constraint(equalTo: host.centerXAnchor)
       popup.bottomAnchor.constraint(equalTo: host.safeAreaLayoutGuide.bottomAnchor)
-        .reactive(store.bottomMenuOffsetConstraint)
     }
 
     // Configure tab bar
@@ -217,8 +222,10 @@ class AppViewController: UIViewController {
     view.host(tabBar) { tabBar, host in
       tabBar.leadingAnchor.constraint(equalTo: host.leadingAnchor)
       tabBar.trailingAnchor.constraint(equalTo: host.trailingAnchor)
-      tabBar.bottomAnchor.constraint(equalTo: host.safeAreaLayoutGuide.bottomAnchor)
+      tabBar.bottomAnchor.constraint(equalTo: host.layoutMarginsGuide.bottomAnchor)
         .reactive(store.isShowingData.map { $0 ? 0 : 200 }.eraseToAnyPublisher())
+      tabBar.heightAnchor.constraint(equalToConstant: 40)
+        .reactive(store.isPortrait.map { $0 ? 49 : 30 }.eraseToAnyPublisher())
     }
 
     store.receiveAction = view.isPortrait
@@ -295,7 +302,7 @@ class AppViewController: UIViewController {
     AppToolbar(frame: .zero)
   }()
 
-  private lazy var bottomMenuPopup: UIButton = {
+  private lazy var bottomMenuPopup: UIView = {
     var configuration = UIButton.Configuration.gray()
     configuration.cornerStyle = .dynamic
     configuration.baseForegroundColor = UIColor.systemRed
@@ -341,7 +348,16 @@ class AppViewController: UIViewController {
     popup.menu = demoMenu
     popup.showsMenuAsPrimaryAction = true
 
-    return popup
+    let wrapperView = UIView(frame: .zero)
+    wrapperView.host(popup) { popup, wrapper in
+      popup.centerXAnchor.constraint(equalTo: wrapper.centerXAnchor)
+      popup.centerYAnchor.constraint(equalTo: wrapper.centerYAnchor)
+        .reactive(store.bottomMenuOffsetConstraint)
+      popup.heightAnchor.constraint(equalTo: wrapper.heightAnchor)
+      popup.widthAnchor.constraint(equalTo: wrapper.widthAnchor)
+    }
+
+    return wrapperView
   }()
 
   private lazy var segmentedControl: UISegmentedControl = {

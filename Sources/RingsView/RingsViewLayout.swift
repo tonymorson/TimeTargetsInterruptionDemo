@@ -31,3 +31,9 @@ public struct RingsViewLayout: Equatable {
     self.scaleFactorWhenFullyConcentric = scaleFactorWhenFullyConcentric
   }
 }
+
+public extension RingsViewLayout {
+  var overReach: CGFloat {
+    max(abs(concentricity), abs(scaleFactor))
+  }
+}
