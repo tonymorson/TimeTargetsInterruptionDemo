@@ -3,43 +3,59 @@ import Foundation
 import UIKit
 
 public struct RingsViewState: Equatable {
-  public var arrangement: RingsViewLayout
   public var content: RingsData
+  public var landscape: RingsViewLayout
+  public var portrait: RingsViewLayout
+  public var prominentRing: RingSemantic
 
-  public init(arrangement: RingsViewLayout, content: RingsData) {
-    self.arrangement = arrangement
+  public init(content: RingsData, portrait: RingsViewLayout, landscape: RingsViewLayout, prominentRing: RingSemantic) {
     self.content = content
+    self.landscape = landscape
+    self.portrait = portrait
+    self.prominentRing = prominentRing
   }
 }
 
 public enum RingSemantic: Int { case period, session, target }
 
 public enum RingsViewAction: Equatable {
-  case acentricRingsPinched(scaleFactor: CGFloat)
-  case concentricRingsPinched(scaleFactor: CGFloat)
+  case acentricRingsPinched(scaleFactor: CGFloat, whilePortrait: Bool)
+  case concentricRingsPinched(scaleFactor: CGFloat, whilePortrait: Bool)
   case concentricRingsTappedInColoredBandsArea
-  case ringConcentricityDragged(concentricity: CGFloat)
+  case ringConcentricityDragged(concentricity: CGFloat, whilePortrait: Bool)
   case ringsTapped(RingSemantic?)
   case ringSelected(RingSemantic)
 }
 
-public func ringsViewReducer(state: inout RingsViewState, action: RingsViewAction, environment _: RingsViewEnvironment) {
+public func ringsViewReducer(state: inout RingsViewState, action: RingsViewAction) {
   switch action {
-  case let .acentricRingsPinched(scaleFactor: scaleFactor):
-    state.arrangement.scaleFactorWhenFullyAcentric = scaleFactor
-
-  case let .concentricRingsPinched(scaleFactor: scaleFactor):
-    state.arrangement.scaleFactorWhenFullyConcentric = scaleFactor
-
-  case .concentricRingsTappedInColoredBandsArea:
-    switch state.arrangement.focus {
-    case .period: state.arrangement.focus = .session
-    case .session: state.arrangement.focus = .target
-    case .target: state.arrangement.focus = .period
+  case let .acentricRingsPinched(scaleFactor: scaleFactor, whilePortrait: whilePortrait):
+    if whilePortrait {
+      state.portrait.scaleFactorWhenFullyAcentric = scaleFactor
+    } else {
+      state.landscape.scaleFactorWhenFullyAcentric = scaleFactor
     }
 
-  case let .ringConcentricityDragged(newValue):
-    state.arrangement.concentricity = newValue
+  case let .concentricRingsPinched(scaleFactor: scaleFactor, whilePortrait: whilePortrait):
+    if whilePortrait {
+      state.portrait.scaleFactorWhenFullyConcentric = scaleFactor
+    } else {
+      state.landscape.scaleFactorWhenFullyConcentric = scaleFactor
+    }
+
+  case .concentricRingsTappedInColoredBandsArea:
+    switch state.prominentRing {
+    case .period: state.prominentRing = .session
+    case .session: state.prominentRing = .target
+    case .target: state.prominentRing = .period
+    }
+
+  case let .ringConcentricityDragged(newValue, whilePortrait: whilePortrait):
+    if whilePortrait {
+      state.portrait.concentricity = newValue
+    } else {
+      state.landscape.concentricity = newValue
+    }
 
   case .ringsTapped(.some):
     if state.content.period.color == .systemGray2 || state.content.period.color == .lightGray {
@@ -65,12 +81,8 @@ public func ringsViewReducer(state: inout RingsViewState, action: RingsViewActio
     break
 
   case let .ringSelected(ring):
-    state.arrangement.focus = ring
+    state.prominentRing = ring
   }
-}
-
-public struct RingsViewEnvironment {
-  public init() {}
 }
 
 public final class RingsView: UIView {
@@ -94,12 +106,22 @@ public final class RingsView: UIView {
 
   private enum Direction { case vertical, horizontal }
   private var layoutDirection: Direction {
-    switch state.arrangement.acentricAxis {
-    case .alwaysVertical: return .vertical
-    case .alwaysHorizontal: return .horizontal
-    case .alongLongestDimension where isPortrait: return .vertical
-    case .alongLongestDimension where isLandscape: return .horizontal
-    case .alongLongestDimension: fatalError()
+    if isPortrait {
+      switch state.portrait.acentricAxis {
+      case .alwaysVertical: return .vertical
+      case .alwaysHorizontal: return .horizontal
+      case .alongLongestDimension where isPortrait: return .vertical
+      case .alongLongestDimension where isLandscape: return .horizontal
+      case .alongLongestDimension: fatalError()
+      }
+    } else {
+      switch state.landscape.acentricAxis {
+      case .alwaysVertical: return .vertical
+      case .alwaysHorizontal: return .horizontal
+      case .alongLongestDimension where isPortrait: return .vertical
+      case .alongLongestDimension where isLandscape: return .horizontal
+      case .alongLongestDimension: fatalError()
+      }
     }
   }
 
@@ -140,7 +162,9 @@ public final class RingsView: UIView {
   override public func layoutSubviews() {
     super.layoutSubviews()
 
-    apply(concentricLayout: ConcentricLayout(bounds: bounds, settings: state.arrangement))
+    apply(concentricLayout: ConcentricLayout(bounds: bounds,
+                                             layout: isPortrait ? state.portrait : state.landscape,
+                                             focus: state.prominentRing))
   }
 
   override public func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -197,11 +221,21 @@ public final class RingsView: UIView {
       updateRing(details: to.content)
     }
 
-    if from.arrangement != to.arrangement {
-      apply(concentricLayout: ConcentricLayout(bounds: bounds, settings: to.arrangement))
+    // precedence here is important - don't remove comma after isPortrait!
+    if isPortrait, from.portrait != to.portrait || from.prominentRing != to.prominentRing {
+      apply(concentricLayout: ConcentricLayout(bounds: bounds, layout: to.portrait, focus: to.prominentRing))
 
-      if from.arrangement.focus != to.arrangement.focus {
-        updateFocusRingDetails()
+      if from.prominentRing != to.prominentRing {
+        updateProminentRingDetails()
+      }
+    }
+
+    // precedence here is important - don't remove comma after ifLandscape!
+    else if isLandscape, from.landscape != to.landscape || from.prominentRing != to.prominentRing {
+      apply(concentricLayout: ConcentricLayout(bounds: bounds, layout: to.landscape, focus: to.prominentRing))
+
+      if from.prominentRing != to.prominentRing {
+        updateProminentRingDetails()
       }
     }
   }
@@ -218,26 +252,20 @@ public final class RingsView: UIView {
     session.details = details.session
     target.details = details.target
 
-    updateFocusRingDetails()
+    updateProminentRingDetails()
 
     detachedPeriodLabel.text = details.period.label.value
   }
 
-  private func updateFocusRingDetails() {
+  private func updateProminentRingDetails() {
     focus.details = self[keyPath: focusRingKeyPath].details
     focusTrack.color = focus.details.color.darker!
 
     if focus.details.color == UIColor.systemGray2 {
-      switch state.arrangement.focus {
+      switch state.prominentRing {
       case .period: focus.details.color = .systemRed.slightyDarker!
       case .session: focus.details.color = .systemGreen.slightyDarker!
       case .target: focus.details.color = .systemYellow.slightyDarker!
-      }
-
-      switch state.arrangement.focus {
-      case .period: focusTrack.color = .systemRed.darker!.slightyDarker!
-      case .session: focusTrack.color = .systemGreen.darker!.slightyDarker!
-      case .target: focusTrack.color = .systemYellow.darker!.slightyDarker!
       }
     }
 
@@ -254,7 +282,7 @@ public final class RingsView: UIView {
 //    focus.layer.shadowRadius = shadowRadius * 5
 //    focus.layer.shadowOpacity = 0.95
 
-    switch state.arrangement.focus {
+    switch state.prominentRing {
     case .period:
       focus.text.content.subtitle = period.text.content.subtitle
     case .session:
@@ -300,7 +328,7 @@ public final class RingsView: UIView {
       }
 
       if distance < focusInnerRadius {
-        switch state.arrangement.focus {
+        switch state.prominentRing {
         case .period: return .period
         case .session: return .period
         case .target: return .target
@@ -336,29 +364,25 @@ public final class RingsView: UIView {
   }
 
   private var savedRingScaleFactor: CGFloat = .zero
-  private var savedConcentricKeyPath: WritableKeyPath<RingsViewLayout, CGFloat>!
-
+  private var savedLayoutKeyPath: WritableKeyPath<RingsViewState, RingsViewLayout>!
   @objc private func onPinch(gesture: UIPinchGestureRecognizer) {
     switch gesture.state {
     case .began:
-      savedConcentricKeyPath = state.arrangement.concentricity == 0.0
-        ? \RingsViewLayout.scaleFactorWhenFullyConcentric
-        : \RingsViewLayout.scaleFactorWhenFullyAcentric
-
-      savedRingScaleFactor = state.arrangement[keyPath: savedConcentricKeyPath]
+      savedLayoutKeyPath = isPortrait ? \RingsViewState.portrait : \RingsViewState.landscape
+      savedRingScaleFactor = state[keyPath: savedLayoutKeyPath].scaleFactor
 
       let newValue = restrain(value: gesture.scale * savedRingScaleFactor, in: 0.55 ... 0.999999, factor: 2.2)
 
-      sentActions = state.arrangement.concentricity == 0.0
-        ? .concentricRingsPinched(scaleFactor: newValue)
-        : .acentricRingsPinched(scaleFactor: newValue)
+      sentActions = state[keyPath: savedLayoutKeyPath].concentricity == 0.0
+        ? .concentricRingsPinched(scaleFactor: newValue, whilePortrait: isPortrait)
+        : .acentricRingsPinched(scaleFactor: newValue, whilePortrait: isPortrait)
 
     case .changed:
       let newValue = restrain(value: gesture.scale * savedRingScaleFactor, in: 0.55 ... 0.999999, factor: 2.2)
 
-      sentActions = state.arrangement.concentricity == 0.0
-        ? .concentricRingsPinched(scaleFactor: newValue)
-        : .acentricRingsPinched(scaleFactor: newValue)
+      sentActions = state[keyPath: savedLayoutKeyPath].concentricity == 0.0
+        ? .concentricRingsPinched(scaleFactor: newValue, whilePortrait: isPortrait)
+        : .acentricRingsPinched(scaleFactor: newValue, whilePortrait: isPortrait)
 
     case .ended:
       let pinchScale = restrain(value: gesture.scale * savedRingScaleFactor, in: 0.55 ... 0.999999, factor: 2.2)
@@ -369,16 +393,16 @@ public final class RingsView: UIView {
                      usingSpringWithDamping: 0.5,
                      initialSpringVelocity: 0.5,
                      options: [.allowUserInteraction]) {
-        self.sentActions = self.state.arrangement.concentricity == 0.0
-          ? .concentricRingsPinched(scaleFactor: clampedScale)
-          : .acentricRingsPinched(scaleFactor: clampedScale)
+        self.sentActions = self.state[keyPath: self.savedLayoutKeyPath].concentricity == 0.0
+          ? .concentricRingsPinched(scaleFactor: clampedScale, whilePortrait: self.isPortrait)
+          : .acentricRingsPinched(scaleFactor: clampedScale, whilePortrait: self.isPortrait)
       }
 
     case .possible:
       break
 
     default:
-      state.arrangement.scaleFactorWhenFullyConcentric = savedRingScaleFactor
+      state[keyPath: savedLayoutKeyPath].scaleFactorWhenFullyConcentric = savedRingScaleFactor
     }
   }
 
@@ -414,32 +438,36 @@ public final class RingsView: UIView {
       break
 
     case .began:
+      savedLayoutKeyPath = isPortrait ? \RingsViewState.portrait : \RingsViewState.landscape
+
       panStart?.1 = gesture.location(in: self)
       canAnimateZIndex = false
-      panStartConcentricity = state.arrangement.concentricity
+      panStartConcentricity = state[keyPath: savedLayoutKeyPath].concentricity
 
-      let gestureKeyPath = state.arrangement.dragGestureKeyPathFor(bounds: bounds)
+      let gestureKeyPath = state[keyPath: savedLayoutKeyPath].dragGestureKeyPathFor(bounds: bounds)
       let dragAmount = -gesture.translation(in: self)[keyPath: gestureKeyPath] * dragDirectionModifier
       let concentricDelta = dragAmount / dimension
       let concentricity = concentricDelta + panStartConcentricity
 
-      sentActions = .ringConcentricityDragged(concentricity: concentricity)
+      sentActions = .ringConcentricityDragged(concentricity: concentricity, whilePortrait: isPortrait)
 
     case .changed:
-      let gestureKeyPath = state.arrangement.dragGestureKeyPathFor(bounds: bounds)
+      let gestureKeyPath = state[keyPath: savedLayoutKeyPath].dragGestureKeyPathFor(bounds: bounds)
       let dragAmount = -gesture.translation(in: self)[keyPath: gestureKeyPath] * dragDirectionModifier
       let concentricDelta = dragAmount / dimension
       let concentricity = restrain(value: concentricDelta + panStartConcentricity,
                                    in: -1.0 ... 1.0,
                                    factor: 118.4)
 
-      sentActions = .ringConcentricityDragged(concentricity: concentricity)
+      sentActions = .ringConcentricityDragged(concentricity: concentricity, whilePortrait: isPortrait)
 
     case .ended:
       canAnimateZIndex = true
       panStart = nil
 
-      let gestureKeyPath = state.arrangement.dragGestureKeyPathFor(bounds: bounds)
+      let gestureKeyPath = isPortrait
+        ? state.portrait.dragGestureKeyPathFor(bounds: bounds)
+        : state.landscape.dragGestureKeyPathFor(bounds: bounds)
       let dragAmount = -gesture.translation(in: self)[keyPath: gestureKeyPath]
 
       let velocity = gesture.velocity(in: self)
@@ -477,7 +505,7 @@ public final class RingsView: UIView {
                      usingSpringWithDamping: damping,
                      initialSpringVelocity: springVelocity,
                      options: [.allowUserInteraction, .beginFromCurrentState]) {
-        self.sentActions = .ringConcentricityDragged(concentricity: restingConcentricity)
+        self.sentActions = .ringConcentricityDragged(concentricity: restingConcentricity, whilePortrait: self.isPortrait)
       }
     case .cancelled:
       break
@@ -489,7 +517,7 @@ public final class RingsView: UIView {
   }
 
   private var focusRingKeyPath: KeyPath<RingsView, CompositeRingView> {
-    switch state.arrangement.focus {
+    switch state.prominentRing {
     case .period:
       return \.period
     case .session:
@@ -503,7 +531,7 @@ public final class RingsView: UIView {
     period.apply(layout: concentricLayout.period)
     session.apply(layout: concentricLayout.session)
     target.apply(layout: concentricLayout.target)
-    focus.apply(layout: concentricLayout.focus)
+    focus.apply(layout: concentricLayout.focusLayout)
 
     periodTrack.bounds = period.bounds
     periodTrack.center = period.center
@@ -645,8 +673,9 @@ func distanceBetween(point: CGPoint, and otherPoint: CGPoint) -> CGFloat {
 
 private struct ConcentricLayout {
   let bounds: CGRect
+  let focus: RingSemantic
   let vertical: Bool
-  let settings: RingsViewLayout
+  let layout: RingsViewLayout
 
   var captionHeight: CGFloat = 152
   var captionTopPadding: CGFloat { captionHeight / 2.5 }
@@ -657,7 +686,7 @@ private struct ConcentricLayout {
   }
 
   var concentricity: CGFloat {
-    settings.concentricity
+    layout.concentricity
   }
 
   var periodCenterX: CGFloat {
@@ -702,7 +731,7 @@ private struct ConcentricLayout {
           circumference: ringCircumference,
           textOpacity: textOpacity,
           zIndex: 0,
-          zoom: settings.scaleFactor)
+          zoom: layout.scaleFactor)
   }
 
   struct DetachedLabelConcentricityLayout {
@@ -720,10 +749,10 @@ private struct ConcentricLayout {
 
     let detachedPeriodLabelYWhenConcentric = periodCenterY - period.bounds.width / 80
 
-    switch settings.focus {
+    switch focus {
     case .period:
       position = CGPoint(x: periodCenterX, y: detachedPeriodLabelYWhenConcentric)
-      transform = CATransform3DMakeScale(settings.scaleFactor, settings.scaleFactor, 0.5)
+      transform = CATransform3DMakeScale(layout.scaleFactor, layout.scaleFactor, 0.5)
 
     case .session:
       position = CGPoint(x: period.center.x,
@@ -733,10 +762,10 @@ private struct ConcentricLayout {
 
       let scale = valueInConcentricRangeAt(concentricity: min(1.0, abs(concentricity)),
                                            concentricMax: 0.38,
-                                           acentricMin: settings.scaleFactor)
+                                           acentricMin: layout.scaleFactor)
       transform = CATransform3DScale(CATransform3DMakeScale(scale, scale, 0.5),
-                                     settings.scaleFactor,
-                                     settings.scaleFactor,
+                                     layout.scaleFactor,
+                                     layout.scaleFactor,
                                      0.5)
 
     case .target:
@@ -747,9 +776,9 @@ private struct ConcentricLayout {
 
       let scale = valueInConcentricRangeAt(concentricity: min(1.0, abs(concentricity)),
                                            concentricMax: 0.38,
-                                           acentricMin: settings.scaleFactor)
+                                           acentricMin: layout.scaleFactor)
 
-      transform = CATransform3DScale(CATransform3DMakeScale(scale, scale, 0.5), settings.scaleFactor, settings.scaleFactor, 0.5)
+      transform = CATransform3DScale(CATransform3DMakeScale(scale, scale, 0.5), layout.scaleFactor, layout.scaleFactor, 0.5)
     }
 
     return .init(bounds: bounds,
@@ -762,7 +791,7 @@ private struct ConcentricLayout {
           circumference: ringCircumference,
           textOpacity: textOpacity,
           zIndex: abs(concentricityDelta(max: 1, min: 0, concentricity: 1 - abs(concentricity))),
-          zoom: settings.scaleFactor)
+          zoom: layout.scaleFactor)
   }
 
   var target: RingConcentricityLayout {
@@ -770,13 +799,13 @@ private struct ConcentricLayout {
           circumference: ringCircumference,
           textOpacity: textOpacity,
           zIndex: abs(concentricityDelta(max: 2, min: 0, concentricity: 1 - abs(concentricity))),
-          zoom: settings.scaleFactor)
+          zoom: layout.scaleFactor)
   }
 
-  var focus: RingConcentricityLayout {
+  var focusLayout: RingConcentricityLayout {
     let focusKeyPath: KeyPath<Self, RingConcentricityLayout>
 
-    switch settings.focus {
+    switch focus {
     case .period: focusKeyPath = \.period
     case .session: focusKeyPath = \.session
     case .target: focusKeyPath = \.target
@@ -820,12 +849,13 @@ private struct ConcentricLayout {
                              acentricMin: 0.0)
   }
 
-  init(vertical: Bool, bounds: CGRect, settings: RingsViewLayout) {
-    self.vertical = vertical
+  init(isAlwaysPortrait: Bool, bounds: CGRect, layout: RingsViewLayout, focus: RingSemantic) {
+    vertical = isAlwaysPortrait
     self.bounds = bounds
-    self.settings = settings
+    self.layout = layout
+    self.focus = focus
 
-    if vertical {
+    if isAlwaysPortrait {
       if bounds.isPortrait {
         let maxCircumference = concentricityDelta(max: min(bounds.width, bounds.height),
                                                   min: bounds.height / 3,
@@ -863,16 +893,16 @@ private struct ConcentricLayout {
 }
 
 private extension ConcentricLayout {
-  init(bounds: CGRect, settings: RingsViewLayout) {
-    switch settings.acentricAxis {
+  init(bounds: CGRect, layout: RingsViewLayout, focus: RingSemantic) {
+    switch layout.acentricAxis {
     case .alwaysVertical:
-      self = ConcentricLayout(vertical: true, bounds: bounds, settings: settings)
+      self = ConcentricLayout(isAlwaysPortrait: true, bounds: bounds, layout: layout, focus: focus)
 
     case .alwaysHorizontal:
-      self = ConcentricLayout(vertical: false, bounds: bounds, settings: settings)
+      self = ConcentricLayout(isAlwaysPortrait: false, bounds: bounds, layout: layout, focus: focus)
 
     case .alongLongestDimension:
-      self = ConcentricLayout(vertical: bounds.isPortrait, bounds: bounds, settings: settings)
+      self = ConcentricLayout(isAlwaysPortrait: bounds.isPortrait, bounds: bounds, layout: layout, focus: focus)
     }
   }
 }
@@ -1048,11 +1078,17 @@ final class LabelView: UIView {
 public extension RingsViewState {
   init() {
     content = RingsData()
-    arrangement = RingsViewLayout(acentricAxis: .alongLongestDimension,
-                                  concentricity: 0.0,
-                                  focus: .period,
-                                  scaleFactorWhenFullyAcentric: 1.0,
-                                  scaleFactorWhenFullyConcentric: 1.0)
+    portrait = RingsViewLayout(acentricAxis: .alongLongestDimension,
+                               concentricity: 0.0,
+                               scaleFactorWhenFullyAcentric: 1.0,
+                               scaleFactorWhenFullyConcentric: 1.0)
+
+    landscape = RingsViewLayout(acentricAxis: .alongLongestDimension,
+                                concentricity: 1.0,
+                                scaleFactorWhenFullyAcentric: 1.0,
+                                scaleFactorWhenFullyConcentric: 1.0)
+
+    prominentRing = .period
   }
 }
 
