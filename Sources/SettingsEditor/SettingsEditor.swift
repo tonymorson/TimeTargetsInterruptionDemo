@@ -46,13 +46,8 @@ public enum SettingsEditorAction: Equatable {
   case notification(NotificationSettingsEditorAction)
 }
 
-public struct SettingsEditorEnvironment {
-  public init() {}
-}
-
 public func settingsEditorReducer(state: inout SettingsEditorState,
-                                  action: SettingsEditorAction,
-                                  environment _: SettingsEditorEnvironment)
+                                  action: SettingsEditorAction)
 {
   switch action {
   case let .workDurationTapped(value):

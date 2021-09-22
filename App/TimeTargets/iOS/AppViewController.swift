@@ -4,153 +4,149 @@ import SettingsEditor
 import SwiftUIKit
 import UIKit
 
-struct AppViewState: Equatable {
-  struct RingsArrangement: Equatable {
-    public var acentricAxis: AcentricLayoutMode
-    public var concentricity: CGFloat
-    public var scaleFactorWhenFullyAcentric: CGFloat
-    public var scaleFactorWhenFullyConcentric: CGFloat
+private struct RingsLayoutPair: Equatable {
+  public var landscape: RingsViewLayout
+  public var portrait: RingsViewLayout
 
-    public init(acentricAxis: AcentricLayoutMode,
-                concentricity: CGFloat,
-                scaleFactorWhenFullyAcentric: CGFloat,
-                scaleFactorWhenFullyConcentric: CGFloat)
-    {
-      self.acentricAxis = acentricAxis
-      self.concentricity = concentricity
-      self.scaleFactorWhenFullyAcentric = scaleFactorWhenFullyAcentric
-      self.scaleFactorWhenFullyConcentric = scaleFactorWhenFullyConcentric
-    }
+  init(landscape: RingsViewLayout, portrait: RingsViewLayout) {
+    self.landscape = landscape
+    self.portrait = portrait
   }
-
-  var isPortrait: Bool
-  var isShowingData: Bool
-  var ringsArrangementPortrait: RingsArrangement
-  var ringsArrangementLandscape: RingsArrangement
-  var ringsContent: RingsData
-  var ringFocus: RingSemantic
-  var settings: SettingsEditorState?
 
   init() {
-    isPortrait = true
-    isShowingData = false
-    ringsArrangementPortrait = .init(concentricity: 0.0)
-    ringsArrangementLandscape = .init(concentricity: 1.0)
+    landscape = .init(acentricAxis: .alongLongestDimension,
+                      concentricity: 1.0,
+                      scaleFactorWhenFullyAcentric: 1.0,
+                      scaleFactorWhenFullyConcentric: 1.0)
+
+    portrait = .init(acentricAxis: .alongLongestDimension,
+                     concentricity: 0.0,
+                     scaleFactorWhenFullyAcentric: 1.0,
+                     scaleFactorWhenFullyConcentric: 1.0)
+  }
+}
+
+private enum RingsDisplayMode {
+  case ringsOnly
+  case ringsAndActivityView
+
+  mutating func toggle() {
+    switch self {
+    case .ringsOnly: self = .ringsAndActivityView
+    case .ringsAndActivityView: self = .ringsOnly
+    }
+  }
+}
+
+private struct AppViewState: Equatable {
+  var appSettings: SettingsEditorState?
+  var isBestLaidOutInPortraitMode: Bool
+  var mainViewDisplayMode: RingsDisplayMode
+  var ringsContent: RingsData
+  var ringsOnlyLayout: RingsLayoutPair
+  var ringsWithActivityViewLayout: RingsViewLayout
+  var prominentlyDisplayedRing: RingIdentifier
+
+  init() {
+    appSettings = nil
+    mainViewDisplayMode = .ringsOnly
     ringsContent = .init()
-    ringFocus = .period
-    settings = nil
+    ringsOnlyLayout = .init()
+    isBestLaidOutInPortraitMode = true
+    ringsWithActivityViewLayout = .init(acentricAxis: .alongLongestDimension, concentricity: 1.0, scaleFactorWhenFullyAcentric: 1.0, scaleFactorWhenFullyConcentric: 1.0)
+    prominentlyDisplayedRing = .period
   }
 
-  var ringsViewLayoutPortrait: RingsViewLayout {
-    RingsViewLayout(layout: ringsArrangementPortrait, focus: ringFocus)
-  }
-
-  var ringsViewLayoutLandscape: RingsViewLayout {
-    RingsViewLayout(layout: ringsArrangementLandscape, focus: ringFocus)
-  }
-
-  var ringsViewLayoutDataMode: RingsViewLayout {
-    RingsViewLayout(layout: isPortrait ? ringsArrangementPortrait : ringsArrangementLandscape, focus: ringFocus)
-  }
-
-  var rings: RingsViewState {
+  var ringsView: RingsViewState {
     get {
-      if isShowingData {
-        return .init(arrangement: ringsViewLayoutDataMode, content: ringsContent)
-      }
+      switch mainViewDisplayMode {
+      case .ringsOnly:
+        return .init(content: ringsContent,
+                     layout: isBestLaidOutInPortraitMode
+                       ? ringsOnlyLayout.portrait
+                       : ringsOnlyLayout.landscape,
+                     prominentRing: prominentlyDisplayedRing)
 
-      return isPortrait
-        ? .init(arrangement: ringsViewLayoutPortrait, content: ringsContent)
-        : .init(arrangement: ringsViewLayoutLandscape, content: ringsContent)
+      case .ringsAndActivityView:
+        return .init(content: ringsContent,
+                     layout: ringsWithActivityViewLayout,
+                     prominentRing: prominentlyDisplayedRing)
+      }
     }
     set {
-      if isPortrait {
-        ringsArrangementPortrait = RingsArrangement(layout: newValue.arrangement)
-      } else {
-        ringsArrangementLandscape = RingsArrangement(layout: newValue.arrangement)
-      }
       ringsContent = newValue.content
-      ringFocus = newValue.arrangement.focus
+      prominentlyDisplayedRing = newValue.prominentRing
+
+      switch mainViewDisplayMode {
+      case .ringsOnly:
+        if isBestLaidOutInPortraitMode {
+          ringsOnlyLayout.portrait = newValue.layout
+        } else {
+          ringsOnlyLayout.landscape = newValue.layout
+        }
+
+      case .ringsAndActivityView:
+        ringsWithActivityViewLayout = newValue.layout
+      }
     }
   }
 }
 
 enum AppViewAction: Equatable {
-  case rings(RingsViewAction)
-  case settings(SettingsEditorAction)
+  case settingsEditor(SettingsEditorAction)
+  case ringsView(RingsViewAction)
   case settingsEditorDismissed
   case showDataButtonTapped
   case showSettingsEditorButtonTapped
-  case viewTransitionedToLandscape
-  case viewTransitionedToPortrait
+  case mainViewBoundsChanged(Bool)
 }
 
-struct AppEnvironment {}
+private let store = AppStore()
 
-let store = AppStore()
-
-class AppStore {
+private class AppStore {
   @Published private var state = AppViewState()
   @Published var receiveAction: AppViewAction?
 
-  let environment = AppEnvironment()
-
-  var isShowingData: AnyPublisher<Bool, Never> {
+  var ringsDisplayMode: AnyPublisher<RingsDisplayMode, Never> {
     $state
+      .map(\.mainViewDisplayMode)
       .removeDuplicates()
-      .map(\.isShowingData)
       .eraseToAnyPublisher()
   }
 
   var rings: AnyPublisher<RingsViewState, Never> {
-    $state.map(\.rings)
+    $state
+      .map {
+        switch $0.mainViewDisplayMode {
+        case .ringsOnly:
+          return .init(content: $0.ringsContent,
+                       layout: $0.isBestLaidOutInPortraitMode
+                         ? $0.ringsOnlyLayout.portrait
+                         : $0.ringsOnlyLayout.landscape,
+                       prominentRing: $0.prominentlyDisplayedRing)
+
+        case .ringsAndActivityView:
+          return .init(content: $0.ringsContent,
+                       layout: $0.ringsWithActivityViewLayout,
+                       prominentRing: $0.prominentlyDisplayedRing)
+        }
+      }
       .removeDuplicates()
       .eraseToAnyPublisher()
   }
 
-  var ringsFocus: AnyPublisher<RingSemantic, Never> {
-    $state.map(\.rings.arrangement.focus)
+  var ringsFocus: AnyPublisher<RingIdentifier, Never> {
+    $state
+      .map(\.prominentlyDisplayedRing)
       .removeDuplicates()
       .eraseToAnyPublisher()
   }
 
   var settings: AnyPublisher<SettingsEditorState?, Never> {
-    $state.map(\.settings)
-      .removeDuplicates()
-      .eraseToAnyPublisher()
-  }
-
-  var bottomMenuAlpha: AnyPublisher<CGFloat, Never> {
     $state
-      .map(\.rings.arrangement.overReach)
-      .removeDuplicates()
-      .map { overReach in
-        abs(overReach) <= 1.0
-          ? 1.0
-          : 1 - (abs(1 - abs(overReach)) * 3)
-      }
-      .eraseToAnyPublisher()
-  }
-
-  var isPortrait: AnyPublisher<Bool, Never> {
-    $state
-      .map(\.isPortrait)
+      .map(\.appSettings)
       .removeDuplicates()
       .eraseToAnyPublisher()
-  }
-
-  var bottomMenuOffsetConstraint: AnyPublisher<CGFloat?, Never> {
-    $state.map { (state: AppViewState) -> CGFloat? in
-      let overReach = max(abs(state.rings.arrangement.concentricity), abs(state.rings.arrangement.scaleFactor))
-
-      return state.isShowingData
-        ? 88
-        : (overReach > 1.0
-          ? (overReach - 1.0) * (state.isPortrait ? 180.0 : 15.0)
-          : 0)
-    }
-    .removeDuplicates()
-    .eraseToAnyPublisher()
   }
 
   private var cancellables: Set<AnyCancellable> = []
@@ -158,40 +154,34 @@ class AppStore {
   init() {
     $receiveAction
       .compactMap { $0 }
-      .sink { appReducer(state: &self.state, action: $0, environment: self.environment) }
+      .sink { appReducer(state: &self.state, action: $0) }
       .store(in: &cancellables)
   }
 }
 
-func appReducer(state: inout AppViewState, action: AppViewAction, environment _: AppEnvironment) {
+private func appReducer(state: inout AppViewState, action: AppViewAction) {
   switch action {
-  case let .rings(action):
-    ringsViewReducer(state: &state.rings, action: action, environment: ringsViewEnvironment)
+  case let .ringsView(action):
+    ringsViewReducer(state: &state.ringsView, action: action)
 
-  case let .settings(action):
-    if let _ = state.settings {
-      settingsEditorReducer(state: &state.settings!, action: action, environment: settingsEditorEnvironment)
+  case let .settingsEditor(action):
+    if let _ = state.appSettings {
+      settingsEditorReducer(state: &state.appSettings!, action: action)
     }
 
-  case .viewTransitionedToPortrait:
-    state.isPortrait = true
-
-  case .viewTransitionedToLandscape:
-    state.isPortrait = false
-
   case .showDataButtonTapped:
-    state.isShowingData.toggle()
+    state.mainViewDisplayMode.toggle()
 
   case .showSettingsEditorButtonTapped:
-    state.settings = .init()
+    state.appSettings = .init()
 
   case .settingsEditorDismissed:
-    state.settings = nil
+    state.appSettings = nil
+
+  case let .mainViewBoundsChanged(isPortrait):
+    state.isBestLaidOutInPortraitMode = isPortrait
   }
 }
-
-let ringsViewEnvironment = RingsViewEnvironment()
-let settingsEditorEnvironment = SettingsEditorEnvironment()
 
 class AppViewController: UIViewController {
   var cancellables: Set<AnyCancellable> = []
@@ -223,27 +213,23 @@ class AppViewController: UIViewController {
       tabBar.leadingAnchor.constraint(equalTo: host.leadingAnchor)
       tabBar.trailingAnchor.constraint(equalTo: host.trailingAnchor)
       tabBar.bottomAnchor.constraint(equalTo: host.layoutMarginsGuide.bottomAnchor)
-        .reactive(store.isShowingData.map { $0 ? 0 : 200 }.eraseToAnyPublisher())
+        .reactive(store.ringsDisplayMode.map { $0 == .ringsAndActivityView ? 0 : 200 }.eraseToAnyPublisher())
       tabBar.heightAnchor.constraint(equalToConstant: 40)
-        .reactive(store.isPortrait.map { $0 ? 49 : 30 }.eraseToAnyPublisher())
+//        .reactive(store.isPortrait.map { $0 ? 49 : 30 }.eraseToAnyPublisher())
     }
-
-    store.receiveAction = view.isPortrait
-      ? .viewTransitionedToPortrait
-      : .viewTransitionedToLandscape
 
     // Configure rings view
 
     view.host(ringsView) { rings, host in
       rings.leadingAnchor.constraint(equalTo: host.safeAreaLayoutGuide.leadingAnchor)
-        .reactive(store.isShowingData.map { $0 ? 20 : 0 }.eraseToAnyPublisher())
+        .reactive(store.ringsDisplayMode.map { $0 == .ringsAndActivityView ? 20 : 0 }.eraseToAnyPublisher())
       rings.trailingAnchor.constraint(equalTo: host.safeAreaLayoutGuide.trailingAnchor)
-        .reactive(store.isShowingData.map { $0 ? -20 : 0 }.eraseToAnyPublisher())
+        .reactive(store.ringsDisplayMode.map { $0 == .ringsAndActivityView ? -20 : 0 }.eraseToAnyPublisher())
       rings.topAnchor.constraint(equalTo: topAppToolbar.bottomAnchor, constant: 0)
       rings.bottomAnchor.constraint(equalTo: bottomMenuPopup.topAnchor)
-        .reactive(store.isShowingData.map { $0 ? nil : -20 }.eraseToAnyPublisher())
+        .reactive(store.ringsDisplayMode.map { $0 == .ringsAndActivityView ? nil : -20 }.eraseToAnyPublisher())
       rings.heightAnchor.constraint(equalToConstant: 150)
-        .reactive(store.isShowingData.map { $0 ? 150 : nil }.eraseToAnyPublisher())
+        .reactive(store.ringsDisplayMode.map { $0 == .ringsAndActivityView ? 150 : nil }.eraseToAnyPublisher())
     }
 
     // Configure settings editor
@@ -262,7 +248,7 @@ class AppViewController: UIViewController {
             .navigationBarItems(trailing: { BarButtonItem(.done) { store.receiveAction = .settingsEditorDismissed } })
 
           editor.sentActions
-            .map(AppViewAction.settings)
+            .map(AppViewAction.settingsEditor)
             .assign(to: &store.$receiveAction)
         }
       }
@@ -292,7 +278,7 @@ class AppViewController: UIViewController {
 
     rings.$sentActions
       .compactMap { $0 }
-      .map(AppViewAction.rings)
+      .map(AppViewAction.ringsView)
       .assign(to: &store.$receiveAction)
 
     return rings
@@ -329,10 +315,10 @@ class AppViewController: UIViewController {
       }
       .store(in: &cancellables)
 
-    store
-      .bottomMenuAlpha
-      .assign(to: \.alpha, on: button)
-      .store(in: &cancellables)
+//    store
+//      .bottomMenuAlpha
+//      .assign(to: \.alpha, on: button)
+//      .store(in: &cancellables)
 
     store.ringsFocus
       .map { $0 == .period }
@@ -352,7 +338,7 @@ class AppViewController: UIViewController {
     wrapperView.host(popup) { popup, wrapper in
       popup.centerXAnchor.constraint(equalTo: wrapper.centerXAnchor)
       popup.centerYAnchor.constraint(equalTo: wrapper.centerYAnchor)
-        .reactive(store.bottomMenuOffsetConstraint)
+//        .reactive(store.bottomMenuOffsetConstraint)
       popup.heightAnchor.constraint(equalTo: wrapper.heightAnchor)
       popup.widthAnchor.constraint(equalTo: wrapper.widthAnchor)
     }
@@ -361,19 +347,17 @@ class AppViewController: UIViewController {
   }()
 
   private lazy var segmentedControl: UISegmentedControl = {
-    let segmentedControl = UISegmentedControl(items: [UIAction.selectPeriodRing,
-                                                      .selectSessionRing,
-                                                      .selectTargetRing]
-    )
+    let segmentedControl = UISegmentedControl(items: ["Period", "Session", "Target"])
 
-    store.isShowingData
-      .map { $0 ? 1.0 : 0.0 }
+    store.ringsDisplayMode
+      .map { $0 == .ringsAndActivityView ? 1.0 : 0.0 }
+      .removeDuplicates()
       .assign(to: \.alpha, on: segmentedControl)
       .store(in: &cancellables)
 
     store.ringsFocus
-      .removeDuplicates()
       .map(\.rawValue)
+      .removeDuplicates()
       .assign(to: \.selectedSegmentIndex, on: segmentedControl)
       .store(in: &cancellables)
 
@@ -405,14 +389,10 @@ class AppViewController: UIViewController {
     return UIMenu(children: menuItems)
   }
 
-  override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
-    coordinator.animate { _ in
-      store.receiveAction = size.isPortrait
-        ? .viewTransitionedToPortrait
-        : .viewTransitionedToLandscape
-    }
+  override func viewWillLayoutSubviews() {
+    super.viewWillLayoutSubviews()
 
-    super.viewWillTransition(to: size, with: coordinator)
+    store.receiveAction = .mainViewBoundsChanged(view.isPortrait)
   }
 }
 
@@ -431,7 +411,7 @@ extension UIAction {
     UIAction(title: "Start Break",
              image: UIImage(systemName: "arrow.right"),
              discoverabilityTitle: "Start Break") { _ in
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { store.receiveAction = .rings(.ringsTapped(.period)) }
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { store.receiveAction = .ringsView(.ringsViewTapped(.period)) }
     }
   }
 
@@ -439,37 +419,13 @@ extension UIAction {
     UIAction(title: "Skip Break",
              image: UIImage(systemName: "arrow.right.to.line"),
              discoverabilityTitle: "Skip Break") { _ in
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { store.receiveAction = .rings(.ringsTapped(.period)) }
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { store.receiveAction = .ringsView(.ringsViewTapped(.period)) }
     }
   }
 
   static var dismissSettingsEditor: UIAction {
     UIAction(title: "Cancel", discoverabilityTitle: "Cancel") { _ in
       store.receiveAction = .settingsEditorDismissed
-    }
-  }
-
-  static var selectPeriodRing: UIAction {
-    UIAction(title: "Period", discoverabilityTitle: "Select Period Ring") { _ in
-      detachedLabelAnimation {
-        store.receiveAction = .rings(.ringSelected(.period))
-      }
-    }
-  }
-
-  static var selectSessionRing: UIAction {
-    UIAction(title: "Session", discoverabilityTitle: "Select Session Ring") { _ in
-      detachedLabelAnimation {
-        store.receiveAction = .rings(.ringSelected(.session))
-      }
-    }
-  }
-
-  static var selectTargetRing: UIAction {
-    UIAction(title: "Target", discoverabilityTitle: "Select Today Ring") { _ in
-      detachedLabelAnimation {
-        store.receiveAction = .rings(.ringSelected(.target))
-      }
     }
   }
 
@@ -522,31 +478,5 @@ final class AppToolbar: UIView {
   @available(*, unavailable)
   required init?(coder _: NSCoder) {
     fatalError("init(coder:) has not been implemented")
-  }
-}
-
-extension AppViewState.RingsArrangement {
-  init(layout: RingsViewLayout) {
-    acentricAxis = layout.acentricAxis
-    concentricity = layout.concentricity
-    scaleFactorWhenFullyAcentric = layout.scaleFactorWhenFullyAcentric
-    scaleFactorWhenFullyConcentric = layout.scaleFactorWhenFullyConcentric
-  }
-
-  init(concentricity: CGFloat) {
-    acentricAxis = .alongLongestDimension
-    self.concentricity = concentricity
-    scaleFactorWhenFullyAcentric = 1.0
-    scaleFactorWhenFullyConcentric = 1.0
-  }
-}
-
-extension RingsViewLayout {
-  init(layout: AppViewState.RingsArrangement, focus: RingSemantic) {
-    self.init(acentricAxis: layout.acentricAxis,
-              concentricity: layout.concentricity,
-              focus: focus,
-              scaleFactorWhenFullyAcentric: layout.scaleFactorWhenFullyAcentric,
-              scaleFactorWhenFullyConcentric: layout.scaleFactorWhenFullyConcentric)
   }
 }
