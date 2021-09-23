@@ -105,7 +105,6 @@ final class RingsViewController: UIViewController {
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
 
-    print(view.isPortrait)
     store.input = .mainViewBoundsChangedToPreferPortraitLayout(view.isPortrait)
   }
 }
