@@ -727,7 +727,7 @@ private struct ConcentricLayout {
     case .session:
       position = CGPoint(x: period.center.x,
                          y: valueInConcentricRangeAt(concentricity: min(1.0, abs(concentricity)),
-                                                     concentricMax: session.center.y + (session.bounds.height / 6.55),
+                                                     concentricMax: period.center.y + (period.bounds.height / 6.55),
                                                      acentricMin: detachedPeriodLabelYWhenConcentric))
 
       let scale = valueInConcentricRangeAt(concentricity: min(1.0, abs(concentricity)),
@@ -741,7 +741,7 @@ private struct ConcentricLayout {
     case .target:
       position = CGPoint(x: period.center.x,
                          y: valueInConcentricRangeAt(concentricity: min(1.0, abs(concentricity)),
-                                                     concentricMax: target.center.y + (target.bounds.height / 6.55),
+                                                     concentricMax: period.center.y + (period.bounds.height / 6.55),
                                                      acentricMin: detachedPeriodLabelYWhenConcentric))
 
       let scale = valueInConcentricRangeAt(concentricity: min(1.0, abs(concentricity)),
