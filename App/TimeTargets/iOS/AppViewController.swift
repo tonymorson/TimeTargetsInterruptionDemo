@@ -273,9 +273,13 @@ class AppViewController: UIViewController {
       .filter { $0 != nil }
       .sink { _ in
         if self.presentedViewController == nil {
-          let filteredSettings = store.settings.filter { $0 != nil }.map { $0! }.eraseToAnyPublisher()
+          let filteredSettings = store.settings.filter { $0 != nil }
+            .map { $0! }
+            .eraseToAnyPublisher()
+
           let editor = SettingsEditor(state: filteredSettings)
           editor.onDismiss = { store.receiveAction = .settingsEditorDismissed }
+
           self.present(editor, animated: true)
 
           (editor.viewControllers.first)?
@@ -385,8 +389,7 @@ class AppViewController: UIViewController {
 
     rings.$sentActions
       .compactMap { $0 }
-      .map { AppViewAction.ringsView($0, whilePortrait: self.view.isPortrait) }
-//      .map(AppViewAction.ringsView)
+      .map { .ringsView($0, whilePortrait: self.view.isPortrait) }
       .assign(to: &store.$receiveAction)
 
     return rings
