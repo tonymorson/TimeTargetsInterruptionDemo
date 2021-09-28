@@ -7,18 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		4117DBFD26ECB59100DE4AEA /* SwiftUIKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4117DBFC26ECB59100DE4AEA /* SwiftUIKit */; };
+		411ABF4527035C1E00D9E92A /* Application in Frameworks */ = {isa = PBXBuildFile; productRef = 411ABF4427035C1E00D9E92A /* Application */; };
 		416F64FA26EE244C000DF69C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 416F64F926EE244C000DF69C /* AppDelegate.swift */; };
 		416F64FC26EE244C000DF69C /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 416F64FB26EE244C000DF69C /* SceneDelegate.swift */; };
 		416F650626EE244F000DF69C /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 416F650426EE244F000DF69C /* LaunchScreen.storyboard */; };
 		416F650E26EE24D8000DF69C /* SettingsEditor in Frameworks */ = {isa = PBXBuildFile; productRef = 416F650D26EE24D8000DF69C /* SettingsEditor */; };
 		418F9A1426ECB39A0005624B /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 418F9A1326ECB39A0005624B /* AppDelegate.swift */; };
 		418F9A1626ECB39A0005624B /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 418F9A1526ECB39A0005624B /* SceneDelegate.swift */; };
-		418F9A1826ECB39A0005624B /* AppViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 418F9A1726ECB39A0005624B /* AppViewController.swift */; };
 		418F9A1B26ECB39A0005624B /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 418F9A1926ECB39A0005624B /* Main.storyboard */; };
 		418F9A1D26ECB39B0005624B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 418F9A1C26ECB39B0005624B /* Assets.xcassets */; };
 		418F9A2026ECB39B0005624B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 418F9A1E26ECB39B0005624B /* LaunchScreen.storyboard */; };
-		4195714B26EFF98A0001095C /* SettingsEditor in Frameworks */ = {isa = PBXBuildFile; productRef = 4195714A26EFF98A0001095C /* SettingsEditor */; };
 		4198973126EE0996008CB625 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4198973026EE0996008CB625 /* AppDelegate.swift */; };
 		4198973326EE0996008CB625 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4198973226EE0996008CB625 /* SceneDelegate.swift */; };
 		4198973D26EE099A008CB625 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4198973B26EE099A008CB625 /* LaunchScreen.storyboard */; };
@@ -27,7 +25,6 @@
 		41B9AA7C26EF315500CE6606 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B9AA7B26EF315500CE6606 /* SceneDelegate.swift */; };
 		41B9AA8626EF315900CE6606 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 41B9AA8426EF315900CE6606 /* LaunchScreen.storyboard */; };
 		41B9AA8C26EF324500CE6606 /* RingsView in Frameworks */ = {isa = PBXBuildFile; productRef = 41B9AA8B26EF324500CE6606 /* RingsView */; };
-		41F7333A26EFDC6800D96D11 /* RingsView in Frameworks */ = {isa = PBXBuildFile; productRef = 41F7333926EFDC6800D96D11 /* RingsView */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,7 +36,6 @@
 		418F9A1126ECB39A0005624B /* iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		418F9A1326ECB39A0005624B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		418F9A1526ECB39A0005624B /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		418F9A1726ECB39A0005624B /* AppViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewController.swift; sourceTree = "<group>"; };
 		418F9A1A26ECB39A0005624B /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		418F9A1C26ECB39B0005624B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		418F9A1F26ECB39B0005624B /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -69,9 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4195714B26EFF98A0001095C /* SettingsEditor in Frameworks */,
-				4117DBFD26ECB59100DE4AEA /* SwiftUIKit in Frameworks */,
-				41F7333A26EFDC6800D96D11 /* RingsView in Frameworks */,
+				411ABF4527035C1E00D9E92A /* Application in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -148,7 +142,6 @@
 			children = (
 				418F9A1326ECB39A0005624B /* AppDelegate.swift */,
 				418F9A1526ECB39A0005624B /* SceneDelegate.swift */,
-				418F9A1726ECB39A0005624B /* AppViewController.swift */,
 				418F9A1926ECB39A0005624B /* Main.storyboard */,
 				418F9A1C26ECB39B0005624B /* Assets.xcassets */,
 				418F9A1E26ECB39B0005624B /* LaunchScreen.storyboard */,
@@ -216,9 +209,7 @@
 			);
 			name = iOS;
 			packageProductDependencies = (
-				4117DBFC26ECB59100DE4AEA /* SwiftUIKit */,
-				41F7333926EFDC6800D96D11 /* RingsView */,
-				4195714A26EFF98A0001095C /* SettingsEditor */,
+				411ABF4427035C1E00D9E92A /* Application */,
 			);
 			productName = iOS;
 			productReference = 418F9A1126ECB39A0005624B /* iOS.app */;
@@ -359,7 +350,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				418F9A1826ECB39A0005624B /* AppViewController.swift in Sources */,
 				418F9A1426ECB39A0005624B /* AppDelegate.swift in Sources */,
 				418F9A1626ECB39A0005624B /* SceneDelegate.swift in Sources */,
 			);
@@ -804,15 +794,11 @@
 /* End XCConfigurationList section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		4117DBFC26ECB59100DE4AEA /* SwiftUIKit */ = {
+		411ABF4427035C1E00D9E92A /* Application */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = SwiftUIKit;
+			productName = Application;
 		};
 		416F650D26EE24D8000DF69C /* SettingsEditor */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SettingsEditor;
-		};
-		4195714A26EFF98A0001095C /* SettingsEditor */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SettingsEditor;
 		};
@@ -821,10 +807,6 @@
 			productName = NotificationSettingsEditor;
 		};
 		41B9AA8B26EF324500CE6606 /* RingsView */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = RingsView;
-		};
-		41F7333926EFDC6800D96D11 /* RingsView */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = RingsView;
 		};

@@ -2,35 +2,39 @@ import Foundation
 import UIKit
 
 public struct RingsData: Equatable {
-  public var period = RingData(color: .red,
-                               trackColor: .systemGray4,
-                               label: .init(title: ("WORK", "PERIOD"),
-                                            value: "25:00",
-                                            subtitle: "remaining",
-                                            caption: "25 MINUTES"),
-                               value: 0.2)
+  public var period: RingData
+  public var session: RingData
+  public var target: RingData
 
-  public var session = RingData(color: .green,
-                                trackColor: .systemGray4,
-                                label: .init(title: ("MORNING", "SESSION"),
-                                             value: "1 of 4",
-                                             subtitle: "in progress",
-                                             caption: "2 HOURS"),
-                                value: 0.5)
+  public init(period: RingData, session: RingData, target: RingData) {
+    self.period = period
+    self.session = session
+    self.target = target
+  }
 
-  public var target = RingData(color: .yellow,
-                               trackColor: .systemGray4,
-                               label: .init(title: ("TODAY'S", "TARGET"),
-                                            value: "2%",
-                                            subtitle: "completed",
-                                            caption: "5 HOURS"),
-                               value: 0.8)
-
-  public init() {}
+  public init() {
+    period = RingData()
+    session = RingData()
+    target = RingData()
+  }
 }
 
 public struct RingData: Equatable {
+  public init(color: UIColor, trackColor: UIColor, label: RingData.LabelDetails, value: CGFloat) {
+    self.color = color
+    self.trackColor = trackColor
+    self.label = label
+    self.value = value
+  }
+
   public struct LabelDetails: Equatable {
+    public init(title: (String, String) = ("", ""), value: String = "", subtitle: String = "", caption: String = "") {
+      self.title = title
+      self.value = value
+      self.subtitle = subtitle
+      self.caption = caption
+    }
+
     public static func == (lhs: RingData.LabelDetails, rhs: RingData.LabelDetails) -> Bool {
       lhs.title.0 == rhs.title.0
         && lhs.title.1 == rhs.title.1
