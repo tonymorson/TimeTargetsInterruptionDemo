@@ -68,10 +68,6 @@ private struct AppViewState: Equatable {
 
     preferredRingsLayoutInSingleColumnMode = .init()
 
-    ringsViewDataModeRegular = .init(content: .init(),
-                                     layout: preferredRingsLayoutInDoubleColumnModeMode,
-                                     prominentRing: prominentlyDisplayedRing)
-
     currentTick = 0
     timeline = .init()
   }
@@ -82,20 +78,42 @@ private struct AppViewState: Equatable {
           tick: currentTick)
   }
 
-  var popupMenuItems: [UIAction] {
+  var popupMenuItems: [UIMenuElement] {
     let isCountingDown = timeline.countdown.isCountingDown(at: currentTick)
     let isWorkTime = report.currentPeriod.isWorkPeriod
     let isAtStartOfPeriod = report.currentPeriod.firstTick == report.tick
 
+    let logInterruptionMenu = UIMenu(options: .displayInline, children: [UIMenu(title: "Note Interruption...", image: UIImage(systemName: "pencil"), children: [
+      Interruption.conversation.uiAction,
+      Interruption.email.uiAction,
+      Interruption.socialMedia.uiAction,
+      Interruption.daydreaming.uiAction,
+      Interruption.phone.uiAction,
+      Interruption.message.uiAction,
+
+      UIMenu(title: "More...", children: [
+        Interruption.tired.uiAction,
+        Interruption.finished.uiAction,
+        Interruption.lunch.uiAction,
+        Interruption.other.uiAction,
+        Interruption.restroom.uiAction,
+        Interruption.underTheWeather.uiAction,
+        Interruption.health.uiAction,
+        Interruption.meeting.uiAction,
+        Interruption.powerFailure.uiAction,
+      ].reversed()),
+
+    ].reversed())])
+
     switch (isCountingDown, isWorkTime, isAtStartOfPeriod) {
-    case (true, true, true): return [.pauseWorkPeriod, .skipToNextBreak]
-    case (true, true, false): return [.pauseWorkPeriod, .skipToNextBreak, .restartWorkPeriod]
-    case (true, false, true): return [.pauseBreak, .skipBreak]
-    case (true, false, false): return [.pauseBreak, .skipBreak, .restartBreak]
-    case (false, true, true): return [.startWorkPeriod, .skipToNextBreak]
-    case (false, true, false): return [.resumeWorkPeriod, .skipToNextBreak, .restartWorkPeriod]
-    case (false, false, true): return [.startBreak, .skipBreak]
-    case (false, false, false): return [.resumeBreak, .skipToNextWorkPeriod, .restartBreak]
+    case (true, true, true): return [UIAction.pauseWorkPeriod, UIAction.skipToNextBreak]
+    case (true, true, false): return [UIAction.pauseWorkPeriod, UIAction.skipToNextBreak, UIAction.restartWorkPeriod]
+    case (true, false, true): return [UIAction.pauseBreak, UIAction.skipBreak]
+    case (true, false, false): return [UIAction.pauseBreak, UIAction.skipBreak, UIAction.restartBreak]
+    case (false, true, true): return [UIAction.startWorkPeriod, UIAction.skipToNextBreak]
+    case (false, true, false): return [logInterruptionMenu, UIAction.resumeWorkPeriod, UIAction.skipToNextBreak, UIAction.restartWorkPeriod]
+    case (false, false, true): return [UIAction.startBreak, UIAction.skipBreak]
+    case (false, false, false): return [logInterruptionMenu, UIAction.resumeBreak, UIAction.skipToNextWorkPeriod, UIAction.restartBreak]
     }
   }
 
@@ -200,7 +218,11 @@ private struct AppViewState: Equatable {
           prominentRing: prominentlyDisplayedRing)
   }
 
-  var ringsViewDataModeRegular: RingsViewState
+  var ringsViewDataModeRegular: RingsViewState {
+    .init(content: ringsData,
+          layout: preferredRingsLayoutInDoubleColumnModeMode,
+          prominentRing: prominentlyDisplayedRing)
+  }
 }
 
 enum AppViewAction: Equatable {
@@ -276,7 +298,7 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
           state.preferredRingsLayoutInSingleColumnMode.landscape.scaleFactorWhenFullyAcentric = scaleFactor
         }
       case .doubleColumn:
-        state.ringsViewDataModeRegular.layout.scaleFactorWhenFullyAcentric = scaleFactor
+        state.preferredRingsLayoutInDoubleColumnModeMode.scaleFactorWhenFullyAcentric = scaleFactor
       }
 
     case let .concentricRingsPinched(scaleFactor: scaleFactor):
@@ -288,7 +310,7 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
           state.preferredRingsLayoutInSingleColumnMode.landscape.scaleFactorWhenFullyConcentric = scaleFactor
         }
       case .doubleColumn:
-        state.ringsViewDataModeRegular.layout.scaleFactorWhenFullyConcentric = scaleFactor
+        state.preferredRingsLayoutInDoubleColumnModeMode.scaleFactorWhenFullyConcentric = scaleFactor
       }
 
     case .concentricRingsTappedInColoredBandsArea:
@@ -307,7 +329,7 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
           state.preferredRingsLayoutInSingleColumnMode.landscape.concentricity = concentricity
         }
       case .doubleColumn:
-        state.ringsViewDataModeRegular.layout.concentricity = concentricity
+        state.preferredRingsLayoutInDoubleColumnModeMode.concentricity = concentricity
       }
 
     case .ringsViewTapped(.some):
@@ -634,30 +656,6 @@ public class AppViewController: UIViewController {
 
     return tabBar
   }()
-
-  private var demoMenu: UIMenu {
-    var menuItems: [UIAction] {
-      [
-        .startBreak,
-        .skipBreak,
-      ]
-      .reversed()
-    }
-
-    return UIMenu(children: menuItems)
-  }
-
-  private var demoMenu2: UIMenu {
-    var menuItems: [UIAction] {
-      [
-        .startWorkPeriod,
-        .skipToNextBreak,
-      ]
-      .reversed()
-    }
-
-    return UIMenu(children: menuItems)
-  }
 
   private lazy var activityLog: ActivityLog = {
     ActivityLog(frame: .zero)
@@ -1021,6 +1019,98 @@ extension UIAction {
   }
 }
 
+// extension UIAction {
+//  static var conversation: UIAction {
+//    UIAction(title: "Conversation",
+//             image: UIImage(systemName: "person"),
+//             discoverabilityTitle: "Conversation") { _ in
+//      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+////        store.receiveAction = .timeline(.resume)
+//      }
+//    }
+//  }
+//
+//  static var email: UIAction {
+//    UIAction(title: "Email",
+//             image: UIImage(systemName: "at"),
+//             discoverabilityTitle: "Email") { _ in
+//      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+////        store.receiveAction = .timeline(.resume)
+//      }
+//    }
+//  }
+//
+//  static var socialMedia: UIAction {
+//    UIAction(title: "Social Media",
+//             image: UIImage(systemName: "person.2"),
+//             discoverabilityTitle: "Social Media") { _ in
+//      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+////        store.receiveAction = .timeline(.resume)
+//      }
+//    }
+//  }
+//
+//  static var daydreaming: UIAction {
+//    UIAction(title: "Daydreaming",
+//             image: UIImage(systemName: "scribble"),
+//             discoverabilityTitle: "Daydreaming") { _ in
+//      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+////        store.receiveAction = .timeline(.resume)
+//      }
+//    }
+//  }
+//
+//  static var phone: UIAction {
+//    UIAction(title: "Phone",
+//             image: UIImage(systemName: "phone"),
+//             discoverabilityTitle: "Phone") { _ in
+//      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+////        store.receiveAction = .timeline(.resume)
+//      }
+//    }
+//  }
+//
+//  static var message: UIAction {
+//    UIAction(title: "Text Message",
+//             image: UIImage(systemName: "message"),
+//             discoverabilityTitle: "Text Message") { _ in
+//      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+////        store.receiveAction = .timeline(.resume)
+//      }
+//    }
+//  }
+//
+////  static var daydreaming: UIAction {
+////    UIAction(title: "Daydreaming",
+////             image: UIImage(systemName: "scribble"),
+////             discoverabilityTitle: "Daydreaming") { _ in
+////      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+//////        store.receiveAction = .timeline(.resume)
+////      }
+////    }
+////  }
+////
+////  static var feelingTired: UIAction {
+////    UIAction(title: "Daydreaming",
+////             image: UIImage(systemName: "battery"),
+////             discoverabilityTitle: "Feeling Tired") { _ in
+////      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+//////        store.receiveAction = .timeline(.resume)
+////      }
+////    }
+////  }
+////
+////  static var feelingTired: UIAction {
+////    UIAction(title: "Daydreaming",
+////             image: UIImage(systemName: "battery"),
+////             discoverabilityTitle: "Feeling Tired") { _ in
+////      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+//////        store.receiveAction = .timeline(.resume)
+////      }
+////    }
+////  }
+// }
+
 final class AppToolbar: UIView {
   override init(frame _: CGRect) {
     super.init(frame: .zero)
@@ -1304,4 +1394,14 @@ public enum TimelineAction: Int, Equatable, Codable {
   case skipCurrentPeriod
   case toggle
   case changedTimeline
+}
+
+extension Interruption {
+  var uiAction: UIAction {
+    UIAction(title: conciseTitle,
+             image: UIImage(systemName: imageName),
+             discoverabilityTitle: title) { _ in
+//      store.receiveAction = .timeline(.resume)    }
+    }
+  }
 }

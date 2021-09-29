@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import UIKit
 
@@ -25,10 +24,9 @@ public final class RingsPopupMenuView: UIButton {
     }
   }
 
-  public var menuItems: [UIAction] = [] {
+  public var menuItems: [UIMenuElement] = [] {
     didSet {
       DispatchQueue.main.async {
-        print("Hello")
         self.menu = UIMenu(children: self.menuItems)
       }
     }
