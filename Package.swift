@@ -23,6 +23,10 @@ let package = Package(
       targets: ["RingsView"]
     ),
     .library(
+      name: "RingsPopupMenu",
+      targets: ["RingsPopupMenu"]
+    ),
+    .library(
       name: "SettingsEditor",
       targets: ["SettingsEditor"]
     ),
@@ -67,7 +71,7 @@ let package = Package(
     // Targets can depend on other targets in this package, and on products in packages this package depends on.
     .target(
       name: "Application",
-      dependencies: ["RingsView", "SettingsEditor", "SwiftUIKit", "Timeline", "TimelineReports"]
+      dependencies: ["RingsPopupMenu", "RingsView", "SettingsEditor", "SwiftUIKit", "Timeline", "TimelineReports"]
     ),
     .target(
       name: "NotificationSettingsEditor",
@@ -76,6 +80,10 @@ let package = Package(
     .target(
       name: "RingsView",
       dependencies: ["SwiftUIKit"]
+    ),
+    .target(
+      name: "RingsPopupMenu",
+      dependencies: []
     ),
     .target(
       name: "SettingsEditor",

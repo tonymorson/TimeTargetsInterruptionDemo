@@ -1,4 +1,5 @@
 import Combine
+import RingsPopupMenu
 import RingsView
 import SettingsEditor
 import SwiftUIKit
@@ -516,6 +517,15 @@ public class AppViewController: UIViewController {
     view.host(activityLogHeading)
     view.host(activityLog)
 
+    Publishers.Zip(store.$state.map(\.popupMenuTitle), store.$state.map(\.popupMenuTitleColor))
+      .assign(to: \.title, on: bottomMenuPopup)
+      .store(in: &cancellables)
+
+    store.$state.map(\.popupMenuItems)
+      .removeDuplicates { $0.map(\.title) == $1.map(\.title) }
+      .assign(to: \.menuItems, on: bottomMenuPopup)
+      .store(in: &cancellables)
+
     store.$state
       .map(\.columnDisplayMode)
       .map { $0 == .doubleColumn && !(self.view.isPortrait && self.traitCollection.horizontalSizeClass == .compact && self.traitCollection.verticalSizeClass == .regular) }
@@ -604,70 +614,8 @@ public class AppViewController: UIViewController {
     AppToolbar(frame: .zero)
   }()
 
-  private lazy var bottomMenuPopup: UIView = {
-    var configuration = UIButton.Configuration.gray()
-    configuration.cornerStyle = .dynamic
-    configuration.baseForegroundColor = UIColor.systemRed
-    configuration.baseBackgroundColor = .clear
-    configuration.buttonSize = .medium
-
-    configuration.titlePadding = 4
-    configuration.titleAlignment = .center
-
-    let button = UIButton(configuration: configuration)
-    button.tintColor = .label
-    button.showsMenuAsPrimaryAction = true
-
-    let popup = button
-
-    Publishers.Zip(store.$state.map(\.popupMenuTitle), store.$state.map(\.popupMenuTitleColor))
-      .sink { [unowned self] in
-        var title = AttributedString($0.0)
-        title.font = UIFont.systemFont(ofSize: 19, weight: .light).rounded()
-        title.foregroundColor = $0.1
-        popup.configuration?.attributedTitle = title
-      }
-      .store(in: &cancellables)
-
-//    store
-//      .bottomMenuAlpha
-//      .assign(to: \.alpha, on: button)
-//      .store(in: &cancellables)
-
-    store.ringsFocus
-      .map { $0 == .period }
-      .map { $0 ? ("You have worked 22 minutes taking 3 breaks so far", UIColor.secondaryLabel) : ("Next break at 2.30PM", .label) }
-      .sink {
-        var title = AttributedString($0.0)
-        title.font = UIFont.systemFont(ofSize: 13, weight: .light)
-        title.foregroundColor = $0.1
-//        popup.configuration?.attributedSubtitle = title
-      }
-      .store(in: &cancellables)
-
-    store.$state
-      .map(\.popupMenuItems)
-      .removeDuplicates {
-        $0.map(\.title) == $1.map(\.title)
-      }
-      .map {
-        UIMenu(children: $0.reversed())
-      }
-      .assign(to: \.menu, on: popup)
-      .store(in: &cancellables)
-
-    popup.showsMenuAsPrimaryAction = true
-
-    let wrapperView = UIView(frame: .zero)
-    wrapperView.host(popup) { popup, wrapper in
-      popup.centerXAnchor.constraint(equalTo: wrapper.centerXAnchor)
-      popup.centerYAnchor.constraint(equalTo: wrapper.centerYAnchor)
-//        .reactive(store.bottomMenuOffsetConstraint)
-      popup.heightAnchor.constraint(equalTo: wrapper.heightAnchor)
-      popup.widthAnchor.constraint(equalTo: wrapper.widthAnchor)
-    }
-
-    return wrapperView
+  private lazy var bottomMenuPopup: RingsPopupMenuView = {
+    RingsPopupMenuView()
   }()
 
   private lazy var tabBar: FixedTabBar = {
