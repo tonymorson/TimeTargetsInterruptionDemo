@@ -498,6 +498,8 @@ public final class RingsView: UIView {
   }
 
   private func apply(concentricLayout: ConcentricLayout) {
+    assertMainThread()
+
     period.apply(layout: concentricLayout.period)
     session.apply(layout: concentricLayout.session)
     target.apply(layout: concentricLayout.target)
@@ -534,6 +536,7 @@ public final class RingsView: UIView {
 
   override public var bounds: CGRect {
     didSet {
+      assertMainThread()
       guard oldValue != bounds else { return }
 
       forceRedraw()
@@ -1085,4 +1088,8 @@ func restrain(value: CGFloat, in range: ClosedRange<CGFloat>, factor _: CGFloat)
   }
 
   return value
+}
+
+public func assertMainThread(_ file: StaticString = #file, line: UInt = #line) {
+  assert(Thread.isMainThread, "Code at \(file):\(line) must run on main thread!")
 }

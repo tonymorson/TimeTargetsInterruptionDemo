@@ -48,12 +48,11 @@ enum TabIdentifier {
 private struct AppViewState: Equatable {
   var appSettings: SettingsEditorState?
   var columnDisplayMode: DisplayMode
-  var currentTick: Int
   var preferredRingsLayoutInSingleColumnMode: RingsLayoutPair
   var preferredRingsLayoutInDoubleColumnModeMode: RingsViewLayout
   var prominentlyDisplayedRing: RingIdentifier
   var selectedDataTab: TabIdentifier
-  var timeline: Timeline
+  var userActivities: UserActivitesState
 
   init() {
     appSettings = nil
@@ -65,21 +64,22 @@ private struct AppViewState: Equatable {
                                                        scaleFactorWhenFullyConcentric: 1.0)
     prominentlyDisplayedRing = .period
     selectedDataTab = .today
-
     preferredRingsLayoutInSingleColumnMode = .init()
+    userActivities = .init(history: [])
+  }
 
-    currentTick = 0
-    timeline = .init()
+  var timeline: Timeline {
+    userActivities.latestTimeline
   }
 
   var report: Report {
     .init(workPattern: timeline.periods,
           dailyTarget: timeline.dailyTarget,
-          tick: currentTick)
+          tick: userActivities.currentTick)
   }
 
   var popupMenuItems: [UIMenuElement] {
-    let isCountingDown = timeline.countdown.isCountingDown(at: currentTick)
+    let isCountingDown = userActivities.isCountingDown
     let isWorkTime = report.currentPeriod.isWorkPeriod
     let isAtStartOfPeriod = report.currentPeriod.firstTick == report.tick
 
@@ -118,7 +118,7 @@ private struct AppViewState: Equatable {
   }
 
   var popupMenuTitle: String {
-    let isCountingDown = timeline.countdown.isCountingDown(at: currentTick)
+    let isCountingDown = userActivities.isCountingDown
     let isWorkTime = report.currentPeriod.isWorkPeriod
     let isAtStartOfPeriod = report.currentPeriod.firstTick == report.tick
 
@@ -135,7 +135,7 @@ private struct AppViewState: Equatable {
   }
 
   var popupMenuTitleColor: UIColor {
-    timeline.countdown.isCountingDown(at: currentTick)
+    userActivities.isCountingDown
       ? .label
       : .systemRed
   }
@@ -157,13 +157,17 @@ private struct AppViewState: Equatable {
   }
 
   var ringsData: RingsData {
-    let trackColor: UIColor = timeline.countdown.isCountingDown(at: currentTick) ? .systemGray4 : .systemGray5
+    let isCountingDown = userActivities.isCountingDown
+
+    let trackColor: UIColor = isCountingDown
+      ? .systemGray4
+      : .systemGray5
 
     let periodColor: UIColor
     let sessionColor: UIColor
     let targetColor: UIColor
 
-    if timeline.countdown.isCountingDown(at: currentTick) {
+    if isCountingDown {
       periodColor = report.currentPeriod.isWorkPeriod ? .systemRed : .systemOrange
       sessionColor = .green
       targetColor = .yellow
@@ -333,7 +337,7 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
       }
 
     case .ringsViewTapped(.some):
-      state.timeline.toggleCountdown(at: Date.init)
+      userActivitesReducer(state: &state.userActivities, action: .toggle)
 
       return .fireAndForget {
         if cancellables.isEmpty {
@@ -369,18 +373,17 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
     state.selectedDataTab = tab
 
   case .timer:
-    state.currentTick = state.timeline.countdown.tick(at: Date())
+    state.userActivities.currentTick = state.timeline.countdown.tick(at: Date())
 
   case .timeline(.pause):
-    state.timeline.pauseCountdown(at: Date.init)
+    userActivitesReducer(state: &state.userActivities, action: .pause)
 
     return .fireAndForget {
       cancellables.removeAll()
     }
 
   case .timeline(.restartCurrentPeriod):
-    state.timeline.moveCountdownToStartOfCurrentPeriod(at: Date.init)
-    state.currentTick = state.timeline.countdown.tick(at: Date())
+    userActivitesReducer(state: &state.userActivities, action: .restartCurrentPeriod)
 
     return .fireAndForget {
       cancellables.removeAll()
@@ -393,15 +396,14 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
     }
 
   case .timeline(.resetTimelineToTickZero):
-    state.timeline.resetCountdownToTickZero(date: Date.init)
-    state.currentTick = state.timeline.countdown.tick(at: Date())
+    userActivitesReducer(state: &state.userActivities, action: .resetTimelineToTickZero)
 
     return .fireAndForget {
       cancellables.removeAll()
     }
 
   case .timeline(.resume):
-    state.timeline.resumeCountdown(from: Date.init)
+    userActivitesReducer(state: &state.userActivities, action: .resume)
 
     return .fireAndForget {
       cancellables.removeAll()
@@ -414,8 +416,7 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
     }
 
   case .timeline(.skipCurrentPeriod):
-    state.timeline.moveCountdownToStartOfNextPeriod(at: Date.init)
-    state.currentTick = state.timeline.countdown.tick(at: Date())
+    userActivitesReducer(state: &state.userActivities, action: .skipCurrentPeriod)
 
     return .fireAndForget {
       cancellables.removeAll()
@@ -428,7 +429,7 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
     }
 
   case .timeline(.toggle):
-    state.timeline.toggleCountdown(at: Date.init)
+    userActivitesReducer(state: &state.userActivities, action: .toggle)
 
     return .fireAndForget {
       if cancellables.isEmpty {
@@ -664,7 +665,11 @@ public class AppViewController: UIViewController {
   }()
 
   private lazy var activityLogHeading: ActivityLogHeading = {
-    ActivityLogHeading(frame: .zero, input: store.$state.map(\.dataHeadlineContent).compactMap { $0 }.eraseToAnyPublisher())
+    ActivityLogHeading(frame: .zero,
+                       input: store.$state
+                         .map(\.dataHeadlineContent)
+                         .compactMap { $0 }
+                         .eraseToAnyPublisher())
   }()
 
   var noShowDataLayoutMode: [NSLayoutConstraint] = []
@@ -1181,6 +1186,8 @@ final class AppToolbar: UIView {
 }
 
 final class ActivityLog: UIView {
+  var cancellables = Set<AnyCancellable>()
+
   private lazy var segmentedControl: UISegmentedControl = {
     let segmentedControl = UISegmentedControl(items: ["Activity", "Tasks", "Interruptions"]
     )
@@ -1206,6 +1213,12 @@ final class ActivityLog: UIView {
       logEntry.topAnchor.constraint(equalTo: segmentedControl.bottomAnchor, constant: 20)
       logEntry.trailingAnchor.constraint(equalTo: parent.trailingAnchor, constant: 20)
     }
+
+    store.$state.map(\.userActivities).map { userActivities -> String in
+      "\(userActivities.history.count) user events so far... (Last event: \(userActivities.history.last?.action.logName ?? "None"))"
+    }
+    .assign(to: \.text, on: logEntry)
+    .store(in: &cancellables)
   }
 
   @available(*, unavailable)
@@ -1384,18 +1397,8 @@ extension AppViewState {
   }
 
   var interruptionTime: Date {
-    timeline.countdown.time(at: currentTick)
+    timeline.countdown.time(at: userActivities.currentTick)
   }
-}
-
-public enum TimelineAction: Int, Equatable, Codable {
-  case pause
-  case restartCurrentPeriod
-  case resetTimelineToTickZero
-  case resume
-  case skipCurrentPeriod
-  case toggle
-  case changedTimeline
 }
 
 extension Interruption {
