@@ -12,6 +12,11 @@
 		416F64FC26EE244C000DF69C /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 416F64FB26EE244C000DF69C /* SceneDelegate.swift */; };
 		416F650626EE244F000DF69C /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 416F650426EE244F000DF69C /* LaunchScreen.storyboard */; };
 		416F650E26EE24D8000DF69C /* SettingsEditor in Frameworks */ = {isa = PBXBuildFile; productRef = 416F650D26EE24D8000DF69C /* SettingsEditor */; };
+		4181CC3727065685007D9AD9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4181CC3627065685007D9AD9 /* AppDelegate.swift */; };
+		4181CC3927065685007D9AD9 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4181CC3827065685007D9AD9 /* SceneDelegate.swift */; };
+		4181CC3B27065685007D9AD9 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4181CC3A27065685007D9AD9 /* ViewController.swift */; };
+		4181CC4327065685007D9AD9 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4181CC4127065685007D9AD9 /* LaunchScreen.storyboard */; };
+		4181CC4F2706808D007D9AD9 /* InterruptionPickerView in Frameworks */ = {isa = PBXBuildFile; productRef = 4181CC4E2706808D007D9AD9 /* InterruptionPickerView */; };
 		418F9A1426ECB39A0005624B /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 418F9A1326ECB39A0005624B /* AppDelegate.swift */; };
 		418F9A1626ECB39A0005624B /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 418F9A1526ECB39A0005624B /* SceneDelegate.swift */; };
 		418F9A1B26ECB39A0005624B /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 418F9A1926ECB39A0005624B /* Main.storyboard */; };
@@ -33,6 +38,12 @@
 		416F64FB26EE244C000DF69C /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		416F650526EE244F000DF69C /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		416F650726EE244F000DF69C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4181CC3427065685007D9AD9 /* InterruptionPickerPreview.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InterruptionPickerPreview.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4181CC3627065685007D9AD9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		4181CC3827065685007D9AD9 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		4181CC3A27065685007D9AD9 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		4181CC4227065685007D9AD9 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		4181CC4427065685007D9AD9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		418F9A1126ECB39A0005624B /* iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		418F9A1326ECB39A0005624B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		418F9A1526ECB39A0005624B /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -58,6 +69,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				416F650E26EE24D8000DF69C /* SettingsEditor in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4181CC3127065685007D9AD9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4181CC4F2706808D007D9AD9 /* InterruptionPickerView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -98,6 +117,7 @@
 		416F64F226EE11E5000DF69C /* Previews */ = {
 			isa = PBXGroup;
 			children = (
+				4181CC3527065685007D9AD9 /* InterruptionPickerPreview */,
 				4198972F26EE0996008CB625 /* NotificationSettingsEditorPreview */,
 				416F64F826EE244C000DF69C /* SettingsEditorPreview */,
 				41B9AA7826EF315500CE6606 /* RingsViewPreview */,
@@ -114,6 +134,18 @@
 				416F650726EE244F000DF69C /* Info.plist */,
 			);
 			path = SettingsEditorPreview;
+			sourceTree = "<group>";
+		};
+		4181CC3527065685007D9AD9 /* InterruptionPickerPreview */ = {
+			isa = PBXGroup;
+			children = (
+				4181CC3627065685007D9AD9 /* AppDelegate.swift */,
+				4181CC3827065685007D9AD9 /* SceneDelegate.swift */,
+				4181CC3A27065685007D9AD9 /* ViewController.swift */,
+				4181CC4127065685007D9AD9 /* LaunchScreen.storyboard */,
+				4181CC4427065685007D9AD9 /* Info.plist */,
+			);
+			path = InterruptionPickerPreview;
 			sourceTree = "<group>";
 		};
 		418F99ED26ECB3830005624B = {
@@ -133,6 +165,7 @@
 				4198972E26EE0996008CB625 /* NotificationSettingsEditorPreview.app */,
 				416F64F726EE244C000DF69C /* SettingsEditorPreview.app */,
 				41B9AA7726EF315500CE6606 /* RingsViewPreview.app */,
+				4181CC3427065685007D9AD9 /* InterruptionPickerPreview.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -193,6 +226,26 @@
 			);
 			productName = SettingsEditorPreview;
 			productReference = 416F64F726EE244C000DF69C /* SettingsEditorPreview.app */;
+			productType = "com.apple.product-type.application";
+		};
+		4181CC3327065685007D9AD9 /* InterruptionPickerPreview */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4181CC4727065685007D9AD9 /* Build configuration list for PBXNativeTarget "InterruptionPickerPreview" */;
+			buildPhases = (
+				4181CC3027065685007D9AD9 /* Sources */,
+				4181CC3127065685007D9AD9 /* Frameworks */,
+				4181CC3227065685007D9AD9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = InterruptionPickerPreview;
+			packageProductDependencies = (
+				4181CC4E2706808D007D9AD9 /* InterruptionPickerView */,
+			);
+			productName = InterruptionPickerPreview;
+			productReference = 4181CC3427065685007D9AD9 /* InterruptionPickerPreview.app */;
 			productType = "com.apple.product-type.application";
 		};
 		418F9A1026ECB39A0005624B /* iOS */ = {
@@ -267,6 +320,9 @@
 					416F64F626EE244C000DF69C = {
 						CreatedOnToolsVersion = 13.0;
 					};
+					4181CC3327065685007D9AD9 = {
+						CreatedOnToolsVersion = 13.0;
+					};
 					418F9A1026ECB39A0005624B = {
 						CreatedOnToolsVersion = 12.5.1;
 					};
@@ -295,6 +351,7 @@
 				4198972D26EE0996008CB625 /* NotificationSettingsEditorPreview */,
 				416F64F626EE244C000DF69C /* SettingsEditorPreview */,
 				41B9AA7626EF315500CE6606 /* RingsViewPreview */,
+				4181CC3327065685007D9AD9 /* InterruptionPickerPreview */,
 			);
 		};
 /* End PBXProject section */
@@ -305,6 +362,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				416F650626EE244F000DF69C /* LaunchScreen.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4181CC3227065685007D9AD9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4181CC4327065685007D9AD9 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -346,6 +411,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4181CC3027065685007D9AD9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4181CC3B27065685007D9AD9 /* ViewController.swift in Sources */,
+				4181CC3727065685007D9AD9 /* AppDelegate.swift in Sources */,
+				4181CC3927065685007D9AD9 /* SceneDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		418F9A0D26ECB39A0005624B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -380,6 +455,14 @@
 			isa = PBXVariantGroup;
 			children = (
 				416F650526EE244F000DF69C /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+		4181CC4127065685007D9AD9 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				4181CC4227065685007D9AD9 /* Base */,
 			);
 			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
@@ -468,6 +551,62 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.something.SettingsEditorPreview;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		4181CC4527065685007D9AD9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = F3Q5VERFTA;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Previews/InterruptionPickerPreview/Info.plist;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.something.InterruptionPickerPreview;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4181CC4627065685007D9AD9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = F3Q5VERFTA;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Previews/InterruptionPickerPreview/Info.plist;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.something.InterruptionPickerPreview;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -755,6 +894,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		4181CC4727065685007D9AD9 /* Build configuration list for PBXNativeTarget "InterruptionPickerPreview" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4181CC4527065685007D9AD9 /* Debug */,
+				4181CC4627065685007D9AD9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		418F99F126ECB3830005624B /* Build configuration list for PBXProject "TimeTargets" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -801,6 +949,10 @@
 		416F650D26EE24D8000DF69C /* SettingsEditor */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SettingsEditor;
+		};
+		4181CC4E2706808D007D9AD9 /* InterruptionPickerView */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = InterruptionPickerView;
 		};
 		4198974226EE0A61008CB625 /* NotificationSettingsEditor */ = {
 			isa = XCSwiftPackageProductDependency;

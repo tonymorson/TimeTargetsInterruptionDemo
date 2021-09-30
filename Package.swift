@@ -15,6 +15,10 @@ let package = Package(
       targets: ["Application"]
     ),
     .library(
+      name: "InterruptionPickerView",
+      targets: ["InterruptionPickerView"]
+    ),
+    .library(
       name: "NotificationSettingsEditor",
       targets: ["NotificationSettingsEditor"]
     ),
@@ -72,6 +76,10 @@ let package = Package(
     .target(
       name: "Application",
       dependencies: ["RingsPopupMenu", "RingsView", "SettingsEditor", "SwiftUIKit", "Timeline", "TimelineReports"]
+    ),
+    .target(
+      name: "InterruptionPickerView",
+      dependencies: ["SwiftUIKit", "Timeline"]
     ),
     .target(
       name: "NotificationSettingsEditor",
