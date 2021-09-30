@@ -625,7 +625,11 @@ public class AppViewController: UIViewController {
       .removeDuplicates()
       .eraseToAnyPublisher()
 
-    let rings = RingsView(input: storeRingsOutput)
+    let rings = RingsView(state: .init())
+
+    storeRingsOutput
+      .assign(to: \.state, on: rings)
+      .store(in: &cancellables)
 
     rings.$sentActions
       .compactMap { $0 }

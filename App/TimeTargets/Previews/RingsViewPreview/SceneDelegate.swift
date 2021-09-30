@@ -89,16 +89,19 @@ final class RingsViewController: UIViewController {
   private var cancellables: Set<AnyCancellable> = []
 
   override func loadView() {
-    view = RingsView(input: store
-      .$output
-      .map(\.rings)
-      .eraseToAnyPublisher())
+    view = RingsView(state: .init())
 
     (view as! RingsView)
       .$sentActions
       .compactMap { $0 }
       .map(PreviewAction.rings)
       .assign(to: \.input, on: store)
+      .store(in: &cancellables)
+
+    store
+      .$output
+      .map(\.rings)
+      .assign(to: \.state, on: view as! RingsView)
       .store(in: &cancellables)
   }
 

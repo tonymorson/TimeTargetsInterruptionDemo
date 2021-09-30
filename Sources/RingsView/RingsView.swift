@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import UIKit
 
@@ -80,11 +79,10 @@ public func ringsViewReducer(state: inout RingsViewState, action: RingsViewActio
 public final class RingsView: UIView {
   @Published public var sentActions: RingsViewAction?
 
-  fileprivate var state = RingsViewState() {
+  public var state = RingsViewState() {
     didSet { update(from: oldValue, to: state) }
   }
 
-  private var cancellables: Set<AnyCancellable> = []
   private let periodTrack = RingView(frame: .zero)
   private let sessionTrack = RingView(frame: .zero)
   private let targetTrack = RingView(frame: .zero)
@@ -121,13 +119,10 @@ public final class RingsView: UIView {
     }
   }
 
-  public init(input: AnyPublisher<RingsViewState, Never>) {
+  public init(state: RingsViewState) {
     super.init(frame: .zero)
 
-    input.sink { value in
-      self.state = value
-    }
-    .store(in: &cancellables)
+    self.state = state
 
     setup()
   }

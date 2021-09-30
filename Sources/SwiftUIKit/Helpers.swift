@@ -93,7 +93,7 @@ public extension UIView {
 
 public extension UIView {
   @discardableResult
-  func host(_ view: UIView, @NSLayoutConstraintsBuilder constraints: (UIView, UIView) -> [NSLayoutConstraint]) -> Self {
+  func host<T: UIView>(_ view: T, @NSLayoutConstraintsBuilder constraints: (UIView, UIView) -> [NSLayoutConstraint]) -> T {
     view.removeFromSuperview()
     view.translatesAutoresizingMaskIntoConstraints = false
     addSubview(view)
@@ -103,11 +103,11 @@ public extension UIView {
         .filter { !($0 is ReactiveLayoutConstraint) }
     )
 
-    return self
+    return view
   }
 
   @discardableResult
-  func host(_ view: UIView) -> Self {
+  func host<T: UIView>(_ view: T) -> T {
     host(view) { _, _ in }
   }
 }
