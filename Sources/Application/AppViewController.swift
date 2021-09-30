@@ -592,13 +592,15 @@ public class AppViewController: UIViewController {
     .store(in: &cancellables)
   }
 
-  override public func viewWillLayoutSubviews() {
-    super.viewWillLayoutSubviews()
+  override public func willTransition(to newCollection: UITraitCollection, with coordinator: UIViewControllerTransitionCoordinator) {
+    super.willTransition(to: newCollection, with: coordinator)
 
-    // Nudge the store to force some output so the view gets a chance to re-render it's layout if needed
-    // after a view bounds or traits change. This helps us avoid sending view state back into the store
-    // forcing the view to interpret the best layout for it's orientation and size and not the store.
-    store.receiveAction = .tabBarItemTapped(store.state.selectedDataTab)
+    coordinator.animate { _ in
+      // Nudge the store to force some output so the view gets a chance to re-render it's layout if needed
+      // after a view bounds or traits change. This helps us avoid sending view state back into the store
+      // forcing the view to interpret the best layout for it's orientation and size and not the store.
+      store.receiveAction = .tabBarItemTapped(store.state.selectedDataTab)
+    }
   }
 
   private lazy var ringsView: RingsView = {

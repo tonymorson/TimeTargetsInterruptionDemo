@@ -534,6 +534,8 @@ public final class RingsView: UIView {
 
   override public var bounds: CGRect {
     didSet {
+      guard oldValue != bounds else { return }
+
       forceRedraw()
     }
   }
