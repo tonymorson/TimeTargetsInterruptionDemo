@@ -1,4 +1,5 @@
 import Combine
+import InterruptionPickerView
 import RingsPopupMenu
 import RingsView
 import SettingsEditor
@@ -52,6 +53,9 @@ private struct AppViewState: Equatable {
   var preferredRingsLayoutInDoubleColumnModeMode: RingsViewLayout
   var prominentlyDisplayedRing: RingIdentifier
   var selectedDataTab: TabIdentifier
+  var isShowingInterruptionPicker: Bool
+  var isShowingInterruptionPickerID: UUID?
+  var isShowingBottomMenuInterruptionProgressBar: Bool
   var userActivities: UserActivitesState
 
   init() {
@@ -66,6 +70,8 @@ private struct AppViewState: Equatable {
     selectedDataTab = .today
     preferredRingsLayoutInSingleColumnMode = .init()
     userActivities = .init(history: [])
+    isShowingInterruptionPicker = false
+    isShowingBottomMenuInterruptionProgressBar = false
   }
 
   var timeline: Timeline {
@@ -128,7 +134,7 @@ private struct AppViewState: Equatable {
     case (true, false, true): return "Next work period at \(nextPeriodETA.formatted(date: .omitted, time: .shortened))"
     case (true, false, false): return "Next work period at \(nextPeriodETA.formatted(date: .omitted, time: .shortened))"
     case (false, true, true): return "Ready to start work?"
-    case (false, true, false): return "Work interrupted at \(interruptionTime.formatted(date: .omitted, time: .shortened))"
+    case (false, true, false): return "Work paused at \(interruptionTime.formatted(date: .omitted, time: .shortened))"
     case (false, false, true): return "Ready for a break?"
     case (false, false, false): return "Break paused at \(interruptionTime.formatted(date: .omitted, time: .shortened))"
     }
@@ -238,6 +244,9 @@ enum AppViewAction: Equatable {
   case tabBarItemTapped(TabIdentifier)
   case timeline(TimelineAction)
   case timer(TimerAction)
+  case interruptionEncountered(UUID)
+  case prepareToShowInterruptionPicker(UUID)
+  case interruptionCancelled
 }
 
 private let store = AppStore()
@@ -338,6 +347,7 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
 
     case .ringsViewTapped(.some):
       userActivitesReducer(state: &state.userActivities, action: .toggle)
+      state.isShowingBottomMenuInterruptionProgressBar = !cancellables.isEmpty
 
       return .fireAndForget {
         if cancellables.isEmpty {
@@ -348,7 +358,27 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
             .store(in: &cancellables)
         } else {
           cancellables.removeAll()
+
+          let uuid = UUID()
+          store.receiveAction = .prepareToShowInterruptionPicker(uuid)
+
+          DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+            store.receiveAction = .interruptionEncountered(uuid)
+          }
         }
+
+//        if cancellable.isEmpty {
+//          DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+//                    store.receiveAction = .interruptionEncountered
+//
+//          }
+//        if stateCopy.timeline.countdown.isCountingDown(at: stateCopy.userActivities.currentTick) == false {
+//            store.receiveAction = .interruptionCancelled
+//        } else {
+//          DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+//                    store.receiveAction = .interruptionEncountered
+//                  }
+//        }
       }
 
     case .ringsViewTapped(.none):
@@ -374,6 +404,8 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
 
   case .timer:
     state.userActivities.currentTick = state.timeline.countdown.tick(at: Date())
+    state.isShowingInterruptionPicker = false
+    state.isShowingInterruptionPickerID = nil
 
   case .timeline(.pause):
     userActivitesReducer(state: &state.userActivities, action: .pause)
@@ -445,6 +477,22 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
 
   case .timeline(.changedTimeline):
     break
+
+  case let .prepareToShowInterruptionPicker(uuid):
+    state.isShowingInterruptionPickerID = uuid
+
+  case let .interruptionEncountered(uuid):
+    guard uuid == state.isShowingInterruptionPickerID else { return .none }
+    if !state.timeline.countdown.isCountingDown(at: state.userActivities.currentTick) {
+      state.isShowingInterruptionPicker = true
+      state.isShowingInterruptionPickerID = uuid
+      state.isShowingBottomMenuInterruptionProgressBar = false
+    }
+
+  case .interruptionCancelled:
+    state.isShowingInterruptionPicker = false
+    state.isShowingInterruptionPickerID = nil
+    state.isShowingBottomMenuInterruptionProgressBar = false
   }
 
   return .none
@@ -478,6 +526,11 @@ public class AppViewController: UIViewController {
     // Configure bottom menu popup
 
     view.host(bottomMenuPopup)
+    view.host(bottomMenuPopupProgressBar)
+
+    bottomMenuPopupProgressBar.progressTintColor = .systemRed
+    bottomMenuPopupProgressBar.trackTintColor = .systemFill
+    bottomMenuPopupProgressBar.heightAnchor.constraint(equalToConstant: 1).isActive = true
 
     // Configure tab bar
 
@@ -511,6 +564,60 @@ public class AppViewController: UIViewController {
             .assign(to: &store.$receiveAction)
         }
       }
+      .store(in: &cancellables)
+
+    store.$state
+      .map(\.isShowingInterruptionPicker)
+      .removeDuplicates()
+      .sink { isShowing in
+        if isShowing == false, self.presentedViewController is InterruptionPicker {
+          self.dismiss(animated: true)
+          return
+        }
+
+        guard isShowing else { return }
+        guard self.presentedViewController == nil else { return }
+
+        let vc = InterruptionPicker()
+
+        vc.callback = { _ in
+          store.receiveAction = .interruptionCancelled
+        }
+
+        vc.modalPresentationStyle = .pageSheet
+        if let sheet = vc.sheetPresentationController {
+          sheet.preferredCornerRadius = 20
+          sheet.prefersGrabberVisible = true
+          sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+//          sheet.largestUndimmedDetentIdentifier = .medium
+          sheet.detents = [.medium(), .large()]
+        }
+
+        self.present(vc, animated: true)
+      }
+      .store(in: &cancellables)
+
+    store.$state.map(\.isShowingBottomMenuInterruptionProgressBar)
+      .removeDuplicates()
+      .sink { isShowing in
+        print("isShowing", isShowing)
+        progressTimerCancellable.removeAll()
+        if isShowing {
+          self.bottomMenuPopupProgressBar.progress = 0.0
+          Timer.publish(every: 1 / 120, on: .main, in: .default)
+            .autoconnect()
+            .sink { _ in
+              let progress = self.bottomMenuPopupProgressBar.progress
+              self.bottomMenuPopupProgressBar.setProgress(progress + (0.2 / 120), animated: true)
+            }
+            .store(in: &progressTimerCancellable)
+        }
+
+        UIView.animate(withDuration: 0.35) {
+          self.bottomMenuPopupProgressBar.alpha = isShowing ? 1.0 : 0.0
+        }
+      }
+//      .assign(to: \.isHidden, on: bottomMenuPopupProgressBar)
       .store(in: &cancellables)
 
     store.settings
@@ -647,6 +754,10 @@ public class AppViewController: UIViewController {
     RingsPopupMenuView()
   }()
 
+  private lazy var bottomMenuPopupProgressBar: UIProgressView = {
+    UIProgressView()
+  }()
+
   private lazy var tabBar: FixedTabBar = {
     let tabBar = FixedTabBar()
     tabBar.items = [
@@ -686,8 +797,12 @@ public class AppViewController: UIViewController {
       ringsView.topAnchor.constraint(equalTo: topAppToolbar.bottomAnchor),
       ringsView.bottomAnchor.constraint(equalTo: bottomMenuPopup.topAnchor),
 
-      bottomMenuPopup.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
       bottomMenuPopup.centerXAnchor.constraint(equalTo: ringsView.centerXAnchor),
+      bottomMenuPopup.bottomAnchor.constraint(equalTo: bottomMenuPopupProgressBar.topAnchor, constant: 4),
+
+      bottomMenuPopupProgressBar.leadingAnchor.constraint(equalTo: bottomMenuPopup.leadingAnchor, constant: 10),
+      bottomMenuPopupProgressBar.trailingAnchor.constraint(equalTo: bottomMenuPopup.trailingAnchor, constant: -10),
+      bottomMenuPopupProgressBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
 
       activityLogHeading.topAnchor.constraint(equalTo: topAppToolbar.bottomAnchor, constant: 20),
       activityLogHeading.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 1400),
@@ -1209,7 +1324,7 @@ final class ActivityLog: UIView {
     }
 
     let logEntry = UILabel(frame: .zero)
-    logEntry.text = "2:30 PM  Work Interrupted by phone call"
+    logEntry.text = "2:30 PM  Work paused to take phone call"
     logEntry.font = UIFont.preferredFont(forTextStyle: .body, compatibleWith: nil).rounded()
 
     host(logEntry) { logEntry, parent in
@@ -1414,3 +1529,5 @@ extension Interruption {
     }
   }
 }
+
+var progressTimerCancellable: Set<AnyCancellable> = []

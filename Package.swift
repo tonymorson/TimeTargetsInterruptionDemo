@@ -75,7 +75,7 @@ let package = Package(
     // Targets can depend on other targets in this package, and on products in packages this package depends on.
     .target(
       name: "Application",
-      dependencies: ["RingsPopupMenu", "RingsView", "SettingsEditor", "SwiftUIKit", "Timeline", "TimelineReports"]
+      dependencies: ["InterruptionPickerView", "RingsPopupMenu", "RingsView", "SettingsEditor", "SwiftUIKit", "Timeline", "TimelineReports"]
     ),
     .target(
       name: "InterruptionPickerView",

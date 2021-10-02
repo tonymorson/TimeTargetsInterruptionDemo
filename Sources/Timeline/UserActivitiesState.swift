@@ -25,6 +25,15 @@ public struct UserActivitesState: Equatable, Codable {
     guard let activity = history.last else { currentTick = 0; return }
     currentTick = activity.timeline.countdown.tick(at: date())
   }
+
+  public var isInterruptedAndUnspecified: Bool {
+    guard isPaused else { return false }
+    guard let history = history.last else { return false }
+
+    let currentPeriod = history.timeline.periods.periodAt(currentTick)
+
+    return currentPeriod.isWorkPeriod && currentPeriod.firstTick != currentTick
+  }
 }
 
 public struct UserActivity: Equatable, Codable {
