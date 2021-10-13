@@ -41,39 +41,75 @@ public extension Interruption {
 }
 
 public extension Interruption {
-  var title: String {
+  var excuse: String {
     switch self {
     case .conversation:
-      return "Casual Conversation"
+      return "Interrupted by conversation"
     case .daydreaming:
-      return "Temporary Concentration Loss"
+      return "Loss of concentration"
     case .email:
-      return "Email"
+      return "Interrupted by email"
     case .finished:
-      return "Finished Early"
+      return "Finished early"
     case .health:
-      return "Other Health Reasons"
+      return "Stopped for health reasons"
     case .lunch:
-      return "Lunch"
+      return "Stopped for lunch"
     case .message:
-      return "Text Message"
+      return "Interrupted by text message"
     case .meeting:
-      return "Scheduled Event / Needed Elsewhere"
+      return "Needed elsewhere"
     case .phone:
-      return "Phone Call"
+      return "Interrupted by phone call"
     case .powerFailure:
-      return "Equipment/Power Failure"
+      return "Interrupted by power failure"
     case .restroom:
-      return "Restroom"
+      return "Paused for call of nature"
     case .socialMedia:
-      return "Social Media"
+      return "Interrupted by social media"
     case .tired:
-      return "Feeling Tired"
+      return "Loss of energy to tiredness"
     case .underTheWeather:
-      return "Feeling Unwell"
+      return "Feeling under the weather"
 
     case .other:
-      return "Other"
+      return "Countdown interrupted at"
+    }
+  }
+
+  var distracted: String {
+    switch self {
+    case .conversation:
+      return "Distracted by conversation"
+    case .daydreaming:
+      return "Loss of concentration"
+    case .email:
+      return "Distracted by email"
+    case .finished:
+      return "Finished early"
+    case .health:
+      return "Stopped for health reasons"
+    case .lunch:
+      return "Stopped for lunch"
+    case .message:
+      return "Distracted by text message"
+    case .meeting:
+      return "Needed elsewhere"
+    case .phone:
+      return "Distracted by phone call"
+    case .powerFailure:
+      return "Distracted by power failure"
+    case .restroom:
+      return "Paused for call of nature"
+    case .socialMedia:
+      return "Distracted by social media"
+    case .tired:
+      return "Loss of energy to tiredness"
+    case .underTheWeather:
+      return "Feeling under the weather"
+
+    case .other:
+      return "Countdown interrupted at"
     }
   }
 
@@ -92,7 +128,7 @@ public extension Interruption {
     case .lunch:
       return "Lunch"
     case .message:
-      return "Text Message"
+      return "Message"
     case .meeting:
       return "Needed Elsewhere"
     case .phone:
@@ -100,7 +136,7 @@ public extension Interruption {
     case .powerFailure:
       return "Power Failure"
     case .restroom:
-      return "Restroom"
+      return "Call of nature"
     case .socialMedia:
       return "Social Media"
     case .tired:
