@@ -15,8 +15,8 @@ let package = Package(
       targets: ["Application"]
     ),
     .library(
-      name: "InterruptionPickerView",
-      targets: ["InterruptionPickerView"]
+      name: "InterruptionPicker",
+      targets: ["InterruptionPicker"]
     ),
     .library(
       name: "NotificationSettingsEditor",
@@ -75,10 +75,10 @@ let package = Package(
     // Targets can depend on other targets in this package, and on products in packages this package depends on.
     .target(
       name: "Application",
-      dependencies: ["InterruptionPickerView", "RingsPopupMenu", "RingsView", "SettingsEditor", "SwiftUIKit", "Timeline", "TimelineReports"]
+      dependencies: ["InterruptionPicker", "RingsPopupMenu", "RingsView", "SettingsEditor", "SwiftUIKit", "Timeline", "TimelineReports"]
     ),
     .target(
-      name: "InterruptionPickerView",
+      name: "InterruptionPicker",
       dependencies: ["SwiftUIKit", "Timeline"]
     ),
     .target(
