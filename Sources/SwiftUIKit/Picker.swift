@@ -11,9 +11,10 @@ public class Picker<V>: UITableViewCell, CellPickable where V: Equatable {
   private var callback: (V) -> Void
   private var labelText: (V) -> String
   private var sectionTitle: String?
+  private var footerTitle: String?
   private var selection: V? {
     didSet {
-      if let selection = self.selection {
+      if let selection = selection {
         detailTextLabel?.text = labelText(selection)
       } else {
         detailTextLabel?.text = ""
@@ -25,6 +26,7 @@ public class Picker<V>: UITableViewCell, CellPickable where V: Equatable {
 
   public init(_ title: String,
               subtitle: String? = nil,
+              footer: String? = nil,
               selection: AnyPublisher<V, Never>,
               values: [V],
               valueTitle: @escaping (V) -> String,
@@ -33,6 +35,7 @@ public class Picker<V>: UITableViewCell, CellPickable where V: Equatable {
     self.values = values
     labelText = valueTitle
     sectionTitle = subtitle
+    footerTitle = footer
     self.callback = callback
 
     super.init(style: .value1, reuseIdentifier: title)
@@ -60,6 +63,7 @@ public class Picker<V>: UITableViewCell, CellPickable where V: Equatable {
     ListPicker<V>(style: .insetGrouped,
                   title: textLabel?.text ?? "",
                   sectionTitle: sectionTitle,
+                  sectionFooter: footerTitle,
                   selection: selection!,
                   values: values,
                   rowTitle: labelText,
@@ -70,13 +74,15 @@ public class Picker<V>: UITableViewCell, CellPickable where V: Equatable {
 public final class ListPicker<V>: UITableViewController where V: Equatable {
   var callback: (V) -> Void
   var sectionTitle: String?
+  var sectionFooter: String?
   var values: [V]
   var selection: V
   var rowTitle: (V) -> String
 
-  init(style: UITableView.Style, title: String, sectionTitle: String? = nil, selection: V, values: [V], rowTitle: @escaping (V) -> String, callback: @escaping (V) -> Void) {
+  init(style: UITableView.Style, title: String, sectionTitle: String? = nil, sectionFooter: String? = nil, selection: V, values: [V], rowTitle: @escaping (V) -> String, callback: @escaping (V) -> Void) {
     self.rowTitle = rowTitle
     self.sectionTitle = sectionTitle
+    self.sectionFooter = sectionFooter
     self.selection = selection
     self.values = values
     self.callback = callback
@@ -110,6 +116,10 @@ public final class ListPicker<V>: UITableViewController where V: Equatable {
 
   override public func tableView(_: UITableView, titleForHeaderInSection _: Int) -> String? {
     sectionTitle
+  }
+
+  override public func tableView(_: UITableView, titleForFooterInSection _: Int) -> String? {
+    sectionFooter
   }
 
   override public func tableView(_: UITableView, didSelectRowAt indexPath: IndexPath) {
