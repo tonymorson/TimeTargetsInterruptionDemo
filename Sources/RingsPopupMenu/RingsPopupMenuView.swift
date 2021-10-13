@@ -6,7 +6,7 @@ public final class RingsPopupMenuView: UIButton {
     didSet {
       DispatchQueue.main.async {
         var title = AttributedString(self.title.0)
-        title.font = UIFont.systemFont(ofSize: 19, weight: .light).rounded()
+        title.font = UIFont.systemFont(ofSize: 21, weight: .light).rounded()
         title.foregroundColor = self.title.1
         self.configuration?.attributedTitle = title
       }
@@ -16,9 +16,13 @@ public final class RingsPopupMenuView: UIButton {
   public var subtitle: (String, UIColor) = ("", .label) {
     didSet {
       DispatchQueue.main.async {
-        var title = AttributedString(self.title.0)
-        title.font = UIFont.systemFont(ofSize: 13, weight: .light)
-        title.foregroundColor = self.title.1
+        var title = AttributedString(self.subtitle.0)
+        title.font = UIFont.systemFont(ofSize: 17, weight: .light)
+        title.foregroundColor = self.subtitle.1
+
+        self.configuration?.imagePlacement = .bottom
+        self.configuration?.imagePadding = 8
+        self.configuration?.imageColorTransformer = .grayscale
         self.configuration?.attributedSubtitle = title
       }
     }
@@ -45,6 +49,12 @@ public final class RingsPopupMenuView: UIButton {
     self.init(configuration: configuration, primaryAction: nil)
 
     showsMenuAsPrimaryAction = true
+
+    titleLabel?.adjustsFontSizeToFitWidth = true
+    subtitleLabel?.adjustsFontSizeToFitWidth = true
+
+    titleLabel?.numberOfLines = 1
+    subtitleLabel?.numberOfLines = 1
   }
 
   override init(frame: CGRect) {
