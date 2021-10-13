@@ -18,17 +18,19 @@ public struct SettingsEditorState: Equatable {
     public var resetWorkPeriodOnStop: Bool = true
   }
 
-  public enum Appearance: Int { case dark, light, auto }
+  public enum Appearance: Int, Codable { case dark, light, auto }
 
   public var appearance: Appearance = .dark
   public var neverSleep: Bool = true
   public var notifications: NotificationSettingsEditorState = .init()
   public var periods: PeriodSettings = .init()
 
+  public var interruptionTimeout: Double = 3
+
   public init() {}
 }
 
-public enum SettingsEditorAction: Equatable {
+public enum SettingsEditorAction: Equatable, Codable {
   case workDurationTapped(Int)
   case shortBreakDurationTapped(Int)
   case longBreakDurationTapped(Int)
@@ -44,6 +46,8 @@ public enum SettingsEditorAction: Equatable {
   case neverSleepTapped(Bool)
 
   case notification(NotificationSettingsEditorAction)
+
+  case interruptionTimeoutTapped(Double?)
 }
 
 public func settingsEditorReducer(state: inout SettingsEditorState,
@@ -74,6 +78,8 @@ public func settingsEditorReducer(state: inout SettingsEditorState,
     notificationSettingsEditorReducer(state: &state.notifications,
                                       action: action,
                                       environment: NotificationSettingsEditorEnvironment())
+  case let .interruptionTimeoutTapped(timeout):
+    state.interruptionTimeout = timeout ?? -1
   }
 }
 
@@ -133,23 +139,13 @@ final class SettingsEditorForm: Form<SettingsEditorState> {
 
                values: [2, 3, 4, 5, 6, 7, 8])
         { "Every \($0) Work Periods" }
-        callback: { actions.send(.longBreaksFrequencyTapped($0)) }
+          callback: { actions.send(.longBreaksFrequencyTapped($0)) }
 
         Picker("Daily Target",
                selection: stateOverTime.map(\.periods.dailyTarget).eraseToAnyPublisher(),
                values: [2, 3, 4, 5, 6, 7, 8, 9, 10])
         { "\($0) Work Periods" }
-        callback: { actions.send(.dailyTargetTapped($0)) }
-      }
-
-      Section(header: "Alerts") {
-        NotificationSettingsRow(settings: stateOverTime.map(\.notifications).eraseToAnyPublisher(), actions: actions)
-
-        if currentState.notifications.showNotifications {
-          Toggle(title: "Play Sound", isOn: stateOverTime.map(\.notifications.playSound).eraseToAnyPublisher()) { value in
-            actions.send(.notification(.playSoundToggled(value)))
-          }
-        }
+          callback: { actions.send(.dailyTargetTapped($0)) }
       }
 
       Section(header: "Workflow") {
@@ -166,6 +162,36 @@ final class SettingsEditorForm: Form<SettingsEditorState> {
         Toggle(title: "Reset Work Period On Stop",
                isOn: stateOverTime.map(\.periods.resetWorkPeriodOnStop).eraseToAnyPublisher()) {
           actions.send(.resetWorkPeriodOnStopTapped($0))
+        }
+      }
+
+      Section(header: "Pauses & Interruptions") {
+        Picker("Ask About Pauses",
+               subtitle: "Trigger an interruption after a pause",
+               selection: stateOverTime.map(\.interruptionTimeout).eraseToAnyPublisher(),
+               values: [0, 1, 2, 3, 4, 5, 10, 15, 30, -1],
+               valueTitle: { duration in
+                 if duration == 0 { return "Always" }
+                 if duration == -1 { return "Never" }
+                 return "Longer than \(Int(duration)) Secs"
+
+               }) { actions.send(.interruptionTimeoutTapped($0)) }
+
+        if currentState.interruptionTimeout != -1 {
+          Toggle(title: "Enforce Interruption Logging",
+                 isOn: Just(true).eraseToAnyPublisher()) {
+            actions.send(.pauseBeforeWorkPeriodTapped($0))
+          }
+        }
+      }
+
+      Section(header: "Alerts") {
+        NotificationSettingsRow(settings: stateOverTime.map(\.notifications).eraseToAnyPublisher(), actions: actions)
+
+        if currentState.notifications.showNotifications {
+          Toggle(title: "Play Sound", isOn: stateOverTime.map(\.notifications.playSound).eraseToAnyPublisher()) { value in
+            actions.send(.notification(.playSoundToggled(value)))
+          }
         }
       }
 
