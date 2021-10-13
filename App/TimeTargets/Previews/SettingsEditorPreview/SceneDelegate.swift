@@ -3,7 +3,6 @@ import SettingsEditor
 import UIKit
 
 let settings = CurrentValueSubject<SettingsEditorState, Never>(.init())
-let environment = SettingsEditorEnvironment()
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   var cancellables: Set<AnyCancellable> = []
@@ -17,7 +16,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     let actions = editor.sentActions
 
     actions.sink { action in
-      settingsEditorReducer(state: &settings.value, action: action, environment: environment)
+      settingsEditorReducer(state: &settings.value, action: action)
     }
     .store(in: &cancellables)
 
