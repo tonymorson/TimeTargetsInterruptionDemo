@@ -20,14 +20,14 @@ public extension Countdown {
 
 public extension Countdown {
   mutating func start(at timestamp: Date, maxTick: Tick = Tick.max - 1) {
-    let tick = self.tick(at: timestamp)
+    let tick = tick(at: timestamp)
 
     ticks = tick ... max(tick, maxTick)
     startTime = timestamp
   }
 
   mutating func stop(at timestamp: Date) {
-    let tick = self.tick(at: timestamp)
+    let tick = tick(at: timestamp)
 
     ticks = tick ... tick
     startTime = timestamp
@@ -40,7 +40,7 @@ public extension Countdown {
 
 public extension Countdown {
   func isCountingDown(at timestamp: Date) -> Bool {
-    let tick = self.tick(at: timestamp)
+    let tick = tick(at: timestamp)
 
     return isCountingDown(at: tick)
   }
