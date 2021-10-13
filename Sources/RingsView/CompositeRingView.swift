@@ -136,7 +136,7 @@ final class CaptionView: UIView {
     let caption = NSAttributedString(string: text, attributes: captionAttributes)
     let captionBounds = stringBounds(string: caption, ctx: ctx)
     caption.draw(at: CGPoint(x: (bounds.width / 2) - (captionBounds.width / 2),
-                             y: (bounds.height) - (captionBounds.height + (captionBounds.height / 2))))
+                             y: 0))
   }
 
   override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {

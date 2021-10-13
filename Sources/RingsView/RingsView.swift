@@ -13,9 +13,9 @@ public struct RingsViewState: Equatable {
   }
 }
 
-public enum RingIdentifier: Int { case period, session, target }
+public enum RingIdentifier: Int, Codable { case period, session, target }
 
-public enum RingsViewAction: Equatable {
+public enum RingsViewAction: Equatable, Codable {
   case acentricRingsPinched(scaleFactor: CGFloat)
   case concentricRingsPinched(scaleFactor: CGFloat)
   case concentricRingsTappedInColoredBandsArea
