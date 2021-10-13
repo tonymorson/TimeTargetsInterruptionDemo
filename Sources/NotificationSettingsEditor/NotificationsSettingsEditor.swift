@@ -26,7 +26,7 @@ public struct NotificationSettingsEditorState: Equatable {
   }
 }
 
-public enum NotificationSettingsEditorAction: Equatable {
+public enum NotificationSettingsEditorAction: Equatable, Codable {
   case showNotificationsToggled(Bool)
   case playSoundToggled(Bool)
   case onStartPeriodToggled(Bool)
