@@ -1,5 +1,5 @@
 import Combine
-import InterruptionPickerView
+import InterruptionPicker
 import RingsPopupMenu
 import RingsView
 import SettingsEditor
@@ -42,24 +42,27 @@ private enum DisplayMode {
   }
 }
 
-enum TabIdentifier {
+enum NavigationPath: Equatable {
+  case interruptionPicker(InterruptionPickerState, Date)
+  case settingsEditor(SettingsEditorState)
+}
+
+public enum NavigationTabIdentifier: Codable {
   case today, tasks, charts
 }
 
-private struct AppViewState: Equatable {
-  var appSettings: SettingsEditorState?
+private struct AppState: Equatable {
   var columnDisplayMode: DisplayMode
+  var navigationPath: NavigationPath?
   var preferredRingsLayoutInSingleColumnMode: RingsLayoutPair
   var preferredRingsLayoutInDoubleColumnModeMode: RingsViewLayout
   var prominentlyDisplayedRing: RingIdentifier
-  var selectedDataTab: TabIdentifier
-  var isShowingInterruptionPicker: Bool
-  var isShowingInterruptionPickerID: UUID?
-  var isShowingBottomMenuInterruptionProgressBar: Bool
+  var selectedDataTab: NavigationTabIdentifier
   var userActivities: UserActivitesState
+  var pausedToInterruptionTimeout: Double = 5
+  var clarifiedInterruption: Interruption?
 
   init() {
-    appSettings = nil
     columnDisplayMode = .singleColumn
     preferredRingsLayoutInSingleColumnMode = .init()
     preferredRingsLayoutInDoubleColumnModeMode = .init(acentricAxis: .alwaysVertical,
@@ -70,8 +73,20 @@ private struct AppViewState: Equatable {
     selectedDataTab = .today
     preferredRingsLayoutInSingleColumnMode = .init()
     userActivities = .init(history: [])
-    isShowingInterruptionPicker = false
-    isShowingBottomMenuInterruptionProgressBar = false
+  }
+
+  #warning("FIXME: Initiate a proper SettingsEditorState value here...")
+  var settings: SettingsEditorState {
+    set {
+      pausedToInterruptionTimeout = newValue.interruptionTimeout
+    }
+
+    get {
+      var settings = SettingsEditorState()
+      settings.interruptionTimeout = pausedToInterruptionTimeout
+
+      return settings
+    }
   }
 
   var timeline: Timeline {
@@ -84,32 +99,57 @@ private struct AppViewState: Equatable {
           tick: userActivities.currentTick)
   }
 
+  #warning("FIXME: Get this working again...")
   var popupMenuItems: [UIMenuElement] {
     let isCountingDown = userActivities.isCountingDown
     let isWorkTime = report.currentPeriod.isWorkPeriod
     let isAtStartOfPeriod = report.currentPeriod.firstTick == report.tick
 
-    let logInterruptionMenu = UIMenu(options: .displayInline, children: [UIMenu(title: "Note Interruption...", image: UIImage(systemName: "pencil"), children: [
-      Interruption.conversation.uiAction,
-      Interruption.email.uiAction,
-      Interruption.socialMedia.uiAction,
-      Interruption.daydreaming.uiAction,
-      Interruption.phone.uiAction,
-      Interruption.message.uiAction,
+    let logInterruptionMenu = UIMenu(options: .displayInline,
+                                     children: [UIMenu(title: "Clarify Interruption...",
+                                                       image: UIImage(systemName: "pencil"),
+                                                       children: [
+                                                         Interruption.conversation.uiAction,
+                                                         Interruption.email.uiAction,
+                                                         Interruption.socialMedia.uiAction,
+                                                         Interruption.daydreaming.uiAction,
+                                                         Interruption.phone.uiAction,
+                                                         Interruption.message.uiAction,
 
-      UIMenu(title: "More...", children: [
-        Interruption.tired.uiAction,
-        Interruption.finished.uiAction,
-        Interruption.lunch.uiAction,
-        Interruption.other.uiAction,
-        Interruption.restroom.uiAction,
-        Interruption.underTheWeather.uiAction,
-        Interruption.health.uiAction,
-        Interruption.meeting.uiAction,
-        Interruption.powerFailure.uiAction,
-      ].reversed()),
+                                                         UIMenu(title: "More...", children: [
+                                                           Interruption.tired.uiAction,
+                                                           Interruption.finished.uiAction,
+                                                           Interruption.lunch.uiAction,
+                                                           Interruption.other.uiAction,
+                                                           Interruption.restroom.uiAction,
+                                                           Interruption.underTheWeather.uiAction,
+                                                           Interruption.health.uiAction,
+                                                           Interruption.meeting.uiAction,
+                                                           Interruption.powerFailure.uiAction,
+                                                         ].reversed()),
 
-    ].reversed())])
+                                                       ].reversed())])
+
+    //    if let _ = userActivities.history.last?.interruption {
+    //      return [Interruption.conversation.uiAction,
+    //              Interruption.daydreaming.uiAction,
+    //              Interruption.email.uiAction,
+    //              Interruption.message.uiAction,
+    //              Interruption.phone.uiAction,
+    //              Interruption.socialMedia.uiAction,
+    //
+    //              UIMenu(title: "More...", children: [
+    //                Interruption.finished.uiAction,
+    //                Interruption.health.uiAction,
+    //                Interruption.lunch.uiAction,
+    //                Interruption.meeting.uiAction,
+    //                Interruption.tired.uiAction,
+    //                Interruption.powerFailure.uiAction,
+    //                Interruption.restroom.uiAction,
+    //                Interruption.underTheWeather.uiAction,
+    //                Interruption.other.uiAction,
+    //              ].reversed())].reversed()
+    //    }
 
     switch (isCountingDown, isWorkTime, isAtStartOfPeriod) {
     case (true, true, true): return [UIAction.pauseWorkPeriod, UIAction.skipToNextBreak]
@@ -121,29 +161,6 @@ private struct AppViewState: Equatable {
     case (false, false, true): return [UIAction.startBreak, UIAction.skipBreak]
     case (false, false, false): return [logInterruptionMenu, UIAction.resumeBreak, UIAction.skipToNextWorkPeriod, UIAction.restartBreak]
     }
-  }
-
-  var popupMenuTitle: String {
-    let isCountingDown = userActivities.isCountingDown
-    let isWorkTime = report.currentPeriod.isWorkPeriod
-    let isAtStartOfPeriod = report.currentPeriod.firstTick == report.tick
-
-    switch (isCountingDown, isWorkTime, isAtStartOfPeriod) {
-    case (true, true, true): return "Next break at \(nextPeriodETA.formatted(date: .omitted, time: .shortened))"
-    case (true, true, false): return "Next break at \(nextPeriodETA.formatted(date: .omitted, time: .shortened))"
-    case (true, false, true): return "Next work period at \(nextPeriodETA.formatted(date: .omitted, time: .shortened))"
-    case (true, false, false): return "Next work period at \(nextPeriodETA.formatted(date: .omitted, time: .shortened))"
-    case (false, true, true): return "Ready to start work?"
-    case (false, true, false): return "Work paused at \(interruptionTime.formatted(date: .omitted, time: .shortened))"
-    case (false, false, true): return "Ready for a break?"
-    case (false, false, false): return "Break paused at \(interruptionTime.formatted(date: .omitted, time: .shortened))"
-    }
-  }
-
-  var popupMenuTitleColor: UIColor {
-    userActivities.isCountingDown
-      ? .label
-      : .systemRed
   }
 
   var dataHeadlineContent: (String, String)? {
@@ -235,25 +252,31 @@ private struct AppViewState: Equatable {
   }
 }
 
-enum AppViewAction: Equatable {
-  case settingsEditor(SettingsEditorAction)
-  case ringsView(RingsViewAction, whilePortrait: Bool)
+#warning("TODO: Make navigation its own module?")
+
+public enum NavigationAction: Equatable, Codable {
   case settingsEditorDismissed
-  case showDataButtonTapped
-  case showSettingsEditorButtonTapped
-  case tabBarItemTapped(TabIdentifier)
-  case timeline(TimelineAction)
-  case timer(TimerAction)
-  case interruptionEncountered(UUID)
-  case prepareToShowInterruptionPicker(UUID)
-  case interruptionCancelled
+  case settingsEditorSummoned
+  case interruptionPickerDismissed
 }
 
-private let store = AppStore()
+public enum AppAction: Equatable, Codable {
+  case interruptionTapped(Interruption)
+  case navigation(NavigationAction)
+  case ringsView(RingsViewAction, whilePortrait: Bool)
+  case settingsEditor(SettingsEditorAction)
+  case showDataButtonTapped
+  case tabBarItemTapped(NavigationTabIdentifier)
+  case timeline(TimelineAction)
+  case timer(TimerAction)
+}
 
+@MainActor private let store = AppStore()
+
+@MainActor
 private class AppStore {
-  @Published var state = AppViewState()
-  @Published var receiveAction: AppViewAction?
+  @Published var state = AppState()
+  @Published var receiveAction: AppAction?
 
   var ringsDisplayMode: AnyPublisher<DisplayMode, Never> {
     $state
@@ -271,7 +294,13 @@ private class AppStore {
 
   var settings: AnyPublisher<SettingsEditorState?, Never> {
     $state
-      .map(\.appSettings)
+      .map { state -> SettingsEditorState? in
+        if case let .settingsEditor(editorState) = state.navigationPath {
+          return editorState
+        }
+
+        return nil
+      }
       .removeDuplicates()
       .eraseToAnyPublisher()
   }
@@ -283,22 +312,30 @@ private class AppStore {
       .compactMap { $0 }
       .sink {
         let effect = appReducer(state: &self.state, action: $0)
+
         switch effect.f {
-        case let .fireAndForget(f): f()
-        case let .action(f): store.receiveAction = f()
+        case let .fireAndForget(f):
+          Task {
+            await f()
+          }
+
+        case let .action(f):
+          Task {
+            store.receiveAction = await f()
+          }
         }
       }
       .store(in: &cancellables)
   }
 }
 
-enum TimerAction {
+public enum TimerAction: Codable {
   case ticked
 }
 
 var cancellables: Set<AnyCancellable> = []
 
-private func appReducer(state: inout AppViewState, action: AppViewAction) -> Effect {
+private func appReducer(state: inout AppState, action: AppAction) -> Effect {
   switch action {
   case let .ringsView(action, whilePortrait):
     switch action {
@@ -346,39 +383,46 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
       }
 
     case .ringsViewTapped(.some):
-      userActivitesReducer(state: &state.userActivities, action: .toggle)
-      state.isShowingBottomMenuInterruptionProgressBar = !cancellables.isEmpty
+
+      cancellablePropertyAnimator?.stopAnimation(true)
+
+      var isCountingDown = state.userActivities.isCountingDown
+
+      userActivitesReducer(state: &state.userActivities, action: isCountingDown ? .pause : .resume)
+
+      isCountingDown = state.userActivities.isCountingDown
+      let isPaused = !isCountingDown
+      state.clarifiedInterruption = nil
+
+      if isPaused, state.pausedToInterruptionTimeout >= 0 {
+        let scopeIdentifier = 0
+        let title = "Significant interruption at \(state.interruptionTime.formatted(date: .omitted, time: .shortened))"
+        let subtitle = "Provide reason for interruption?"
+        state.navigationPath = .interruptionPicker(.init(scopeIdentifier: scopeIdentifier,
+                                                         title: title,
+                                                         subtitle: subtitle), Date().addingTimeInterval(state.pausedToInterruptionTimeout))
+      } else {
+        state.navigationPath = nil
+      }
+
+      let stateCpy = state
 
       return .fireAndForget {
-        if cancellables.isEmpty {
+        cancellables.removeAll()
+
+        if stateCpy.userActivities.isCountingDown {
           Timer.publish(every: 1, on: .main, in: .default)
             .autoconnect()
-            .map { _ in AppViewAction.timer(.ticked) }
+            .map { _ in AppAction.timer(.ticked) }
             .assign(to: \.receiveAction, on: store)
             .store(in: &cancellables)
         } else {
-          cancellables.removeAll()
-
-          let uuid = UUID()
-          store.receiveAction = .prepareToShowInterruptionPicker(uuid)
-
-          DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-            store.receiveAction = .interruptionEncountered(uuid)
-          }
+          Timer.publish(every: 1, on: .main, in: .default)
+            .autoconnect()
+            .map { _ in AppAction.timer(.ticked) }
+            .assign(to: \.receiveAction, on: store)
+            .store(in: &cancellables)
         }
-
-//        if cancellable.isEmpty {
-//          DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-//                    store.receiveAction = .interruptionEncountered
-//
-//          }
-//        if stateCopy.timeline.countdown.isCountingDown(at: stateCopy.userActivities.currentTick) == false {
-//            store.receiveAction = .interruptionCancelled
-//        } else {
-//          DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-//                    store.receiveAction = .interruptionEncountered
-//                  }
-//        }
       }
 
     case .ringsViewTapped(.none):
@@ -386,26 +430,23 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
     }
 
   case let .settingsEditor(action):
-    if let _ = state.appSettings {
-      settingsEditorReducer(state: &state.appSettings!, action: action)
-    }
+    settingsEditorReducer(state: &state.settings, action: action)
+    state.navigationPath = .settingsEditor(state.settings)
 
   case .showDataButtonTapped:
     state.columnDisplayMode.toggle()
 
-  case .showSettingsEditorButtonTapped:
-    state.appSettings = .init()
+  case .navigation(.settingsEditorSummoned):
+    state.navigationPath = .settingsEditor(state.settings)
 
-  case .settingsEditorDismissed:
-    state.appSettings = nil
+  case .navigation(.settingsEditorDismissed):
+    state.navigationPath = nil
 
   case let .tabBarItemTapped(tab):
     state.selectedDataTab = tab
 
   case .timer:
     state.userActivities.currentTick = state.timeline.countdown.tick(at: Date())
-    state.isShowingInterruptionPicker = false
-    state.isShowingInterruptionPickerID = nil
 
   case .timeline(.pause):
     userActivitesReducer(state: &state.userActivities, action: .pause)
@@ -416,16 +457,6 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
 
   case .timeline(.restartCurrentPeriod):
     userActivitesReducer(state: &state.userActivities, action: .restartCurrentPeriod)
-
-    return .fireAndForget {
-      cancellables.removeAll()
-
-      Timer.publish(every: 1, on: .main, in: .default)
-        .autoconnect()
-        .map { _ in AppViewAction.timer(.ticked) }
-        .assign(to: \.receiveAction, on: store)
-        .store(in: &cancellables)
-    }
 
   case .timeline(.resetTimelineToTickZero):
     userActivitesReducer(state: &state.userActivities, action: .resetTimelineToTickZero)
@@ -442,7 +473,7 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
 
       Timer.publish(every: 1, on: .main, in: .default)
         .autoconnect()
-        .map { _ in AppViewAction.timer(.ticked) }
+        .map { _ in AppAction.timer(.ticked) }
         .assign(to: \.receiveAction, on: store)
         .store(in: &cancellables)
     }
@@ -455,48 +486,26 @@ private func appReducer(state: inout AppViewState, action: AppViewAction) -> Eff
 
       Timer.publish(every: 1, on: .main, in: .default)
         .autoconnect()
-        .map { _ in AppViewAction.timer(.ticked) }
+        .map { _ in AppAction.timer(.ticked) }
         .assign(to: \.receiveAction, on: store)
         .store(in: &cancellables)
-    }
-
-  case .timeline(.toggle):
-    userActivitesReducer(state: &state.userActivities, action: .toggle)
-
-    return .fireAndForget {
-      if cancellables.isEmpty {
-        Timer.publish(every: 1, on: .main, in: .default)
-          .autoconnect()
-          .map { _ in AppViewAction.timer(.ticked) }
-          .assign(to: \.receiveAction, on: store)
-          .store(in: &cancellables)
-      } else {
-        cancellables.removeAll()
-      }
     }
 
   case .timeline(.changedTimeline):
     break
 
-  case let .prepareToShowInterruptionPicker(uuid):
-    state.isShowingInterruptionPickerID = uuid
+  case let .interruptionTapped(interruption):
+    state.clarifiedInterruption = interruption
+    state.navigationPath = nil
 
-  case let .interruptionEncountered(uuid):
-    guard uuid == state.isShowingInterruptionPickerID else { return .none }
-    if !state.timeline.countdown.isCountingDown(at: state.userActivities.currentTick) {
-      state.isShowingInterruptionPicker = true
-      state.isShowingInterruptionPickerID = uuid
-      state.isShowingBottomMenuInterruptionProgressBar = false
-    }
-
-  case .interruptionCancelled:
-    state.isShowingInterruptionPicker = false
-    state.isShowingInterruptionPickerID = nil
-    state.isShowingBottomMenuInterruptionProgressBar = false
+  case .navigation(.interruptionPickerDismissed):
+    state.navigationPath = nil
   }
 
   return .none
 }
+
+var cancellablePropertyAnimator: UIViewPropertyAnimator?
 
 public class AppViewController: UIViewController {
   var cancellables: Set<AnyCancellable> = []
@@ -523,14 +532,9 @@ public class AppViewController: UIViewController {
       toolbar.trailingAnchor.constraint(equalTo: host.safeAreaLayoutGuide.trailingAnchor)
     }
 
-    // Configure bottom menu popup
+    // Add bottom menu pop view below the rings view
 
     view.host(bottomMenuPopup)
-    view.host(bottomMenuPopupProgressBar)
-
-    bottomMenuPopupProgressBar.progressTintColor = .systemRed
-    bottomMenuPopupProgressBar.trackTintColor = .systemFill
-    bottomMenuPopupProgressBar.heightAnchor.constraint(equalToConstant: 1).isActive = true
 
     // Configure tab bar
 
@@ -551,73 +555,19 @@ public class AppViewController: UIViewController {
             .eraseToAnyPublisher()
 
           let editor = SettingsEditor(state: filteredSettings)
-          editor.onDismiss = { store.receiveAction = .settingsEditorDismissed }
+          editor.onDismiss = { store.receiveAction = .navigation(.settingsEditorDismissed) }
 
           self.present(editor, animated: true)
 
           (editor.viewControllers.first)?
-            .navigationBarItems(leading: { BarButtonItem(.cancel) { store.receiveAction = .settingsEditorDismissed } })
-            .navigationBarItems(trailing: { BarButtonItem(.done) { store.receiveAction = .settingsEditorDismissed } })
+            .navigationBarItems(leading: { BarButtonItem(.cancel) { store.receiveAction = .navigation(.settingsEditorDismissed) } })
+            .navigationBarItems(trailing: { BarButtonItem(.done) { store.receiveAction = .navigation(.settingsEditorDismissed) } })
 
           editor.sentActions
-            .map(AppViewAction.settingsEditor)
+            .map(AppAction.settingsEditor)
             .assign(to: &store.$receiveAction)
         }
       }
-      .store(in: &cancellables)
-
-    store.$state
-      .map(\.isShowingInterruptionPicker)
-      .removeDuplicates()
-      .sink { isShowing in
-        if isShowing == false, self.presentedViewController is InterruptionPicker {
-          self.dismiss(animated: true)
-          return
-        }
-
-        guard isShowing else { return }
-        guard self.presentedViewController == nil else { return }
-
-        let vc = InterruptionPicker()
-
-        vc.callback = { _ in
-          store.receiveAction = .interruptionCancelled
-        }
-
-        vc.modalPresentationStyle = .pageSheet
-        if let sheet = vc.sheetPresentationController {
-          sheet.preferredCornerRadius = 20
-          sheet.prefersGrabberVisible = true
-          sheet.prefersScrollingExpandsWhenScrolledToEdge = false
-//          sheet.largestUndimmedDetentIdentifier = .medium
-          sheet.detents = [.medium(), .large()]
-        }
-
-        self.present(vc, animated: true)
-      }
-      .store(in: &cancellables)
-
-    store.$state.map(\.isShowingBottomMenuInterruptionProgressBar)
-      .removeDuplicates()
-      .sink { isShowing in
-        print("isShowing", isShowing)
-        progressTimerCancellable.removeAll()
-        if isShowing {
-          self.bottomMenuPopupProgressBar.progress = 0.0
-          Timer.publish(every: 1 / 120, on: .main, in: .default)
-            .autoconnect()
-            .sink { _ in
-              let progress = self.bottomMenuPopupProgressBar.progress
-              self.bottomMenuPopupProgressBar.setProgress(progress + (0.2 / 120), animated: true)
-            }
-            .store(in: &progressTimerCancellable)
-        }
-
-        UIView.animate(withDuration: 0.35) {
-          self.bottomMenuPopupProgressBar.alpha = isShowing ? 1.0 : 0.0
-        }
-      }
-//      .assign(to: \.isHidden, on: bottomMenuPopupProgressBar)
       .store(in: &cancellables)
 
     store.settings
@@ -647,12 +597,73 @@ public class AppViewController: UIViewController {
     view.host(activityLogHeading)
     view.host(activityLog)
 
-    Publishers.Zip(store.$state.map(\.popupMenuTitle), store.$state.map(\.popupMenuTitleColor))
-      .assign(to: \.title, on: bottomMenuPopup)
-      .store(in: &cancellables)
+    //    store.$state
+    //      .map(\.standardMessage)
+    //      .removeDuplicates()
+    //      .sink { value in
+    //        // https://stackoverflow.com/questions/3073520/animate-text-change-in-uilabel
+    //        let animation = CATransition()
+    //
+    //        let interval: CFTimeInterval = value.message.isEmpty
+    //        ? 1.0
+    //        : 0.15
+    //
+    //        animation.duration = interval
+    //        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+    //        self.bottomMenuPopup.layer.add(animation, forKey: nil)
+    //        self.bottomMenuPopup.title = value.message.isEmpty
+    //        ? (" ", UIColor.systemRed)
+    //        : (value.message, UIColor.systemRed)
+    //
+    //        self.bottomMenuPopup.subtitle = value.subMessage.isEmpty
+    //        ? (" ", UIColor.systemRed)
+    //        : (value.subMessage, UIColor.label)
+    //      }
+    //      .store(in: &cancellables)
+
+    //    Publishers.Zip(store.$state.map(\.popupMenuTitle), store.$state.map(\.popupMenuTitleColor))
+    //      .removeDuplicates { $0.0 == $1.0 }
+    //      .sink { value in
+    //        // https://stackoverflow.com/questions/3073520/animate-text-change-in-uilabel
+    //        let animation = CATransition()
+    //
+    //        let interval: CFTimeInterval = value.0.isEmpty
+    //        ? 1.0
+    //        : 0.15
+    //
+    //        animation.duration = interval
+    //        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+    //        self.bottomMenuPopup.layer.add(animation, forKey: nil)
+    //        self.bottomMenuPopup.title = value.0.isEmpty ? (" ", value.1) : value
+    //      }
+    //      .store(in: &cancellables)
+
+    //    Publishers.Zip(store.$state.map(\.popupMenuSubtitle), store.$state.map { _ in .label })
+    //      .removeDuplicates { $0.0 == $1.0 }
+    //      .map { $0.0.isEmpty ? (" ", $0.1) : $0 }
+    //      .assign(to: \.subtitle, on: bottomMenuPopup)
+    //      .store(in: &cancellables)
+
+    //    Publishers.Zip(store.$state.map(\.popupMenuSubtitle), store.$state.map { _ in UIColor.label })
+    //      .removeDuplicates { $0.0 == $1.0 }
+    //      .map { $0.0.isEmpty ? (" ", $0.1) : $0 }
+    //      .sink { value in
+    //      // https://stackoverflow.com/questions/3073520/animate-text-change-in-uilabel
+    //      let animation = CATransition()
+    //
+    //      let interval: CFTimeInterval = value.0.isEmpty
+    //      ? 1.0
+    //      : 0.15
+    //
+    //      animation.duration = interval
+    //      animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+    //      self.bottomMenuPopup.layer.add(animation, forKey: nil)
+    //        self.bottomMenuPopup.subtitle = self.bottomMenuPopup.subtitle.0.isEmpty ? (" ", value.1) : value
+    //    }      .store(in: &cancellables)
 
     store.$state.map(\.popupMenuItems)
       .removeDuplicates { $0.map(\.title) == $1.map(\.title) }
+      .map { $0.reversed() }
       .assign(to: \.menuItems, on: bottomMenuPopup)
       .store(in: &cancellables)
 
@@ -668,10 +679,11 @@ public class AppViewController: UIViewController {
     store.$state.map { state -> CGFloat in
       (state.columnDisplayMode == .doubleColumn) && self.view.isPortrait && self.traitCollection.horizontalSizeClass == .compact ? 1.0 : 0.0
     }
+    .removeDuplicates()
     .assign(to: \.alpha, on: tabBar)
     .store(in: &cancellables)
 
-    store.$state.sink { [weak self] in
+    store.$state.removeDuplicates().sink { [weak self] in
       guard let self = self else { return }
       let isShowingData = $0.columnDisplayMode == .doubleColumn
 
@@ -698,6 +710,97 @@ public class AppViewController: UIViewController {
       }
     }
     .store(in: &cancellables)
+
+    store.menuPopupViewModel
+      .removeDuplicates()
+      .assign(to: \.viewModel, on: bottomMenuPopup)
+      .store(in: &cancellables)
+
+    store.resumeSoonProgressBarViewModel
+      .removeDuplicates()
+      .sink { [weak self] viewModel in
+        if viewModel != nil {
+          guard let strongSelf = self else { return }
+          let cancellableProgressBar = UIProgressView()
+          cancellableProgressBar.tag = 1_923_338
+          strongSelf.bottomMenuPopupProgressBar = cancellableProgressBar
+          cancellableProgressBar.isHidden = store.state.pausedToInterruptionTimeout < 0
+          cancellableProgressBar.progress = 0.01
+
+          if store.state.pausedToInterruptionTimeout >= 0 {
+            cancellableProgressBar.progress = 0.01
+            cancellableProgressBar.alpha = 0.75
+
+            cancellablePropertyAnimator = cancellableProgressBar.animator(duration: store.state.pausedToInterruptionTimeout) { _ in }
+
+            cancellablePropertyAnimator?.startAnimation()
+          }
+        } else {
+          self?.view.viewWithTag(1_923_338)?.removeFromSuperview()
+          cancellablePropertyAnimator?.stopAnimation(true)
+          cancellablePropertyAnimator = nil
+        }
+      }
+      .store(in: &cancellables)
+
+    // Triggered when global state changes its InterruptionPickerState.
+    store.$state
+      .map(\.navigationPath)
+      .map { navigation -> InterruptionPickerState? in
+        switch navigation {
+        case let .interruptionPicker(state, date):
+          if Date() > date {
+            return Optional(state)
+          } else {
+            return nil
+          }
+        default:
+          return nil
+        }
+      }
+      .removeDuplicates()
+      .sink { interruptionPickerState in
+
+        // If something is already being presented, tear it down.
+        // We may need to do this if a context menu is currently
+        // being shown for example.
+        if self.presentedViewController != nil {
+          self.dismiss(animated: true)
+        }
+
+        // Exit early if we are not presenting a new interruption picker.
+        if interruptionPickerState == nil {
+          return
+        }
+
+        // Otherwise, create a new interruption picker and prepare to present it as a modal half sheet.
+        let interruptionPicker = InterruptionPickerViewController(state: interruptionPickerState!)
+        interruptionPicker.modalPresentationStyle = .pageSheet
+        if let sheet = interruptionPicker.sheetPresentationController {
+          sheet.preferredCornerRadius = 20
+          sheet.prefersGrabberVisible = true
+          sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+          sheet.detents = [.medium(), .large()]
+        }
+
+        // Show the picker on the screen and give the store a chance to update its state.
+        self.present(interruptionPicker, animated: true, completion: {
+          store.receiveAction = .timer(.ticked)
+        })
+
+        // Wait for the user to perform an action and then send it to the store.
+        Task {
+          for await action in interruptionPicker.actions {
+            switch action {
+            case .dismissed:
+              store.receiveAction = .navigation(.interruptionPickerDismissed)
+            case let .interruptionTapped(interruption):
+              store.receiveAction = .interruptionTapped(interruption)
+            }
+          }
+        }
+      }
+      .store(in: &cancellables)
   }
 
   override public func willTransition(to newCollection: UITraitCollection, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -754,9 +857,28 @@ public class AppViewController: UIViewController {
     RingsPopupMenuView()
   }()
 
-  private lazy var bottomMenuPopupProgressBar: UIProgressView = {
-    UIProgressView()
-  }()
+  #warning("FIXME: Move this into MessageCenter module..")
+
+  private var bottomMenuPopupProgressBar: UIProgressView? {
+    didSet {
+      oldValue?.removeFromSuperview()
+      cancellablePropertyAnimator?.stopAnimation(true)
+      cancellablePropertyAnimator = nil
+
+      if let bar = bottomMenuPopupProgressBar {
+        bottomMenuPopup.host(bar) { bar, view in
+          bar.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: 2)
+          bar.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+          bar.widthAnchor.constraint(equalToConstant: 168)
+          bar.heightAnchor.constraint(equalToConstant: 5)
+        }
+        bar.progressTintColor = .systemRed
+        bar.trackTintColor = .systemFill
+        bar.alpha = 0.0
+        view.layoutIfNeeded()
+      }
+    }
+  }
 
   private lazy var tabBar: FixedTabBar = {
     let tabBar = FixedTabBar()
@@ -798,11 +920,9 @@ public class AppViewController: UIViewController {
       ringsView.bottomAnchor.constraint(equalTo: bottomMenuPopup.topAnchor),
 
       bottomMenuPopup.centerXAnchor.constraint(equalTo: ringsView.centerXAnchor),
-      bottomMenuPopup.bottomAnchor.constraint(equalTo: bottomMenuPopupProgressBar.topAnchor, constant: 4),
-
-      bottomMenuPopupProgressBar.leadingAnchor.constraint(equalTo: bottomMenuPopup.leadingAnchor, constant: 10),
-      bottomMenuPopupProgressBar.trailingAnchor.constraint(equalTo: bottomMenuPopup.trailingAnchor, constant: -10),
-      bottomMenuPopupProgressBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+      bottomMenuPopup.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10),
+      bottomMenuPopup.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      bottomMenuPopup.trailingAnchor.constraint(equalTo: view.trailingAnchor),
 
       activityLogHeading.topAnchor.constraint(equalTo: topAppToolbar.bottomAnchor, constant: 20),
       activityLogHeading.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 1400),
@@ -823,7 +943,6 @@ public class AppViewController: UIViewController {
     [
       ringsView.topAnchor.constraint(equalTo: topAppToolbar.bottomAnchor),
       ringsView.heightAnchor.constraint(equalToConstant: 150),
-//      ringsView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
       ringsView.widthAnchor.constraint(equalToConstant: 150),
 
       bottomMenuPopup.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: 200),
@@ -858,9 +977,6 @@ public class AppViewController: UIViewController {
       activityLog.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
       activityLog.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
       activityLog.bottomAnchor.constraint(equalTo: tabBar.topAnchor),
-
-//      bottomMenuPopup.leadingAnchor.constraint(equalTo: activityLogHeading.leadingAnchor),
-//      bottomMenuPopup.bottomAnchor.constraint(equalTo: activityLog.topAnchor, constant: -50),
 
       tabBar.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
       tabBar.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
@@ -1056,9 +1172,7 @@ extension UIAction {
     UIAction(title: "Restart Work Period",
              image: UIImage(systemName: "arrow.left.to.line"),
              discoverabilityTitle: "Restart Work Period") { _ in
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-        store.receiveAction = .timeline(.restartCurrentPeriod)
-      }
+      store.receiveAction = .timeline(.restartCurrentPeriod)
     }
   }
 
@@ -1066,21 +1180,19 @@ extension UIAction {
     UIAction(title: "Restart Break",
              image: UIImage(systemName: "arrow.left.to.line"),
              discoverabilityTitle: "Restart Break") { _ in
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-        store.receiveAction = .timeline(.restartCurrentPeriod)
-      }
+      store.receiveAction = .timeline(.restartCurrentPeriod)
     }
   }
 
   static var dismissSettingsEditor: UIAction {
     UIAction(title: "Cancel", discoverabilityTitle: "Cancel") { _ in
-      store.receiveAction = .settingsEditorDismissed
+      store.receiveAction = .navigation(.settingsEditorDismissed)
     }
   }
 
   static var showSettingsEditor: UIAction {
     UIAction(image: UIImage(systemName: "gear"), discoverabilityTitle: "Show Settings") { _ in
-      store.receiveAction = .showSettingsEditorButtonTapped
+      store.receiveAction = .navigation(.settingsEditorSummoned)
     }
   }
 
@@ -1145,98 +1257,7 @@ extension UIAction {
   }
 }
 
-// extension UIAction {
-//  static var conversation: UIAction {
-//    UIAction(title: "Conversation",
-//             image: UIImage(systemName: "person"),
-//             discoverabilityTitle: "Conversation") { _ in
-//      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-////        store.receiveAction = .timeline(.resume)
-//      }
-//    }
-//  }
-//
-//  static var email: UIAction {
-//    UIAction(title: "Email",
-//             image: UIImage(systemName: "at"),
-//             discoverabilityTitle: "Email") { _ in
-//      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-////        store.receiveAction = .timeline(.resume)
-//      }
-//    }
-//  }
-//
-//  static var socialMedia: UIAction {
-//    UIAction(title: "Social Media",
-//             image: UIImage(systemName: "person.2"),
-//             discoverabilityTitle: "Social Media") { _ in
-//      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-////        store.receiveAction = .timeline(.resume)
-//      }
-//    }
-//  }
-//
-//  static var daydreaming: UIAction {
-//    UIAction(title: "Daydreaming",
-//             image: UIImage(systemName: "scribble"),
-//             discoverabilityTitle: "Daydreaming") { _ in
-//      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-////        store.receiveAction = .timeline(.resume)
-//      }
-//    }
-//  }
-//
-//  static var phone: UIAction {
-//    UIAction(title: "Phone",
-//             image: UIImage(systemName: "phone"),
-//             discoverabilityTitle: "Phone") { _ in
-//      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-////        store.receiveAction = .timeline(.resume)
-//      }
-//    }
-//  }
-//
-//  static var message: UIAction {
-//    UIAction(title: "Text Message",
-//             image: UIImage(systemName: "message"),
-//             discoverabilityTitle: "Text Message") { _ in
-//      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-////        store.receiveAction = .timeline(.resume)
-//      }
-//    }
-//  }
-//
-////  static var daydreaming: UIAction {
-////    UIAction(title: "Daydreaming",
-////             image: UIImage(systemName: "scribble"),
-////             discoverabilityTitle: "Daydreaming") { _ in
-////      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-//////        store.receiveAction = .timeline(.resume)
-////      }
-////    }
-////  }
-////
-////  static var feelingTired: UIAction {
-////    UIAction(title: "Daydreaming",
-////             image: UIImage(systemName: "battery"),
-////             discoverabilityTitle: "Feeling Tired") { _ in
-////      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-//////        store.receiveAction = .timeline(.resume)
-////      }
-////    }
-////  }
-////
-////  static var feelingTired: UIAction {
-////    UIAction(title: "Daydreaming",
-////             image: UIImage(systemName: "battery"),
-////             discoverabilityTitle: "Feeling Tired") { _ in
-////      DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-//////        store.receiveAction = .timeline(.resume)
-////      }
-////    }
-////  }
-// }
-
+#warning("FIXME: Move into its own module...")
 final class AppToolbar: UIView {
   override init(frame _: CGRect) {
     super.init(frame: .zero)
@@ -1304,6 +1325,7 @@ final class AppToolbar: UIView {
   }
 }
 
+#warning("FIXME: Move into its own module...")
 final class ActivityLog: UIView {
   var cancellables = Set<AnyCancellable>()
 
@@ -1346,6 +1368,7 @@ final class ActivityLog: UIView {
   }
 }
 
+#warning("FIXME: Move into its own module...")
 final class ActivityLogHeading: UIView {
   var cancellables: Set<AnyCancellable> = []
 
@@ -1364,17 +1387,6 @@ final class ActivityLogHeading: UIView {
       title.trailingAnchor.constraint(equalTo: parent.trailingAnchor)
     }
 
-//    let subtitle = UILabel(frame: .zero)
-//    subtitle.text = "2 interruptions"
-//    subtitle.font = UIFont.preferredFont(forTextStyle: .subheadline, compatibleWith: nil).rounded()
-//    subtitle.textColor = .secondaryLabel
-//
-//    host(subtitle) { control, parent in
-//      control.leadingAnchor.constraint(equalTo: parent.safeAreaLayoutGuide.leadingAnchor, constant: 10)
-//      control.trailingAnchor.constraint(equalTo: parent.safeAreaLayoutGuide.trailingAnchor, constant: -10)
-//      control.topAnchor.constraint(equalTo: title.bottomAnchor)
-//    }
-
     let subtitle = UILabel(frame: .zero)
     subtitle.text = "5 Events"
     subtitle.font = UIFont.preferredFont(forTextStyle: .subheadline, compatibleWith: nil).rounded()
@@ -1382,17 +1394,19 @@ final class ActivityLogHeading: UIView {
     subtitle.textAlignment = .left
 
     host(subtitle) { subtitle, _ in
-      subtitle.leadingAnchor.constraint(equalTo: title.leadingAnchor)
+      subtitle.leadingAnchor.constraint(equalTo: self.leadingAnchor)
       subtitle.topAnchor.constraint(equalTo: title.bottomAnchor)
-      subtitle.trailingAnchor.constraint(equalTo: trailingAnchor)
-      subtitle.bottomAnchor.constraint(equalTo: bottomAnchor)
+      subtitle.trailingAnchor.constraint(equalTo: self.trailingAnchor)
+      subtitle.bottomAnchor.constraint(equalTo: self.bottomAnchor)
     }
 
-    input.sink { details in
-      title.text = details.0
-      subtitle.text = details.1
-    }
-    .store(in: &cancellables)
+    input
+      .removeDuplicates { $0.0 == $1.0 && $0.1 == $1.1 }
+      .sink { details in
+        title.text = details.0
+        subtitle.text = details.1
+      }
+      .store(in: &cancellables)
   }
 
   @available(*, unavailable)
@@ -1409,27 +1423,6 @@ final class FixedTabBar: UITabBar {
     sizeThatFits.height = 120
 
     return sizeThatFits
-  }
-}
-
-struct Effect {
-  enum EffectType {
-    case action(() -> AppViewAction)
-    case fireAndForget(() -> Void)
-  }
-
-  var f: EffectType
-
-  static func fireAndForget(_ f: @escaping () -> Void) -> Effect {
-    Effect(f: .fireAndForget(f))
-  }
-
-  static func send(_ f: @escaping () -> AppViewAction) -> Effect {
-    Effect(f: .action(f))
-  }
-
-  static var none: Effect {
-    Effect(f: .fireAndForget {})
   }
 }
 
@@ -1467,48 +1460,7 @@ public struct RingsContent: Equatable {
   }
 }
 
-// public extension Report {
-//  var ringsContent: RingsContent {
-//    .init(
-//      outer: .init(
-//        ringTitle: periodUpper.0,
-//        ringSubTitle: periodUpper.1,
-//        progress: periodProgress,
-//        progressDescription: periodHeadline,
-//        descriptionCaption: periodLower,
-//        progressIndicatorColor: currentPeriod.isWorkPeriod
-//          ? .red
-//          : .orange,
-//        trackColor: .purple,
-//        estimatedTimeToCompleteDescription: periodFooter
-//      ),
-//
-//      center: .init(
-//        ringTitle: sessionUpper(Date()).0,
-//        ringSubTitle: sessionUpper(Date()).1,
-//        progress: sessionProgress,
-//        progressDescription: sessionHeadline,
-//        descriptionCaption: sessionLower,
-//        progressIndicatorColor: .green,
-//        trackColor: .gray,
-//        estimatedTimeToCompleteDescription: sessionFooter
-//      ),
-//
-//      inner: .init(
-//        ringTitle: targetUpper.0,
-//        ringSubTitle: targetUpper.1,
-//        progress: targetProgress,
-//        progressDescription: targetHeadline,
-//        descriptionCaption: targetLower,
-//        progressIndicatorColor: .yellow,
-//        trackColor: .gray,
-//        estimatedTimeToCompleteDescription: targetFooter
-//      )
-//    )
-//  }
-// }
-
-extension AppViewState {
+extension AppState {
   var nextPeriodETA: Date {
     guard let nextPeriod = report.nextPeriod else { return .distantFuture }
 
@@ -1524,10 +1476,276 @@ extension Interruption {
   var uiAction: UIAction {
     UIAction(title: conciseTitle,
              image: UIImage(systemName: imageName),
-             discoverabilityTitle: title) { _ in
-//      store.receiveAction = .timeline(.resume)    }
+             discoverabilityTitle: excuse) { _ in
+      Task {
+        await MainActor.run {
+          store.receiveAction = .interruptionTapped(self)
+        }
+      }
     }
   }
 }
 
 var progressTimerCancellable: Set<AnyCancellable> = []
+
+extension AppAction {
+  var uiAction: UIAction? {
+    switch self {
+    case let .interruptionTapped(interruption):
+      return interruption.uiAction
+    default:
+      return nil
+    }
+  }
+}
+
+#warning("FIXME: Move into its own module...")
+extension UIProgressView {
+  func animator(duration: TimeInterval,
+                completion: @escaping (UIViewAnimatingPosition) -> Void) -> UIViewPropertyAnimator
+  {
+    let animator = UIViewPropertyAnimator(duration: duration, curve: .linear, animations: {
+      self.alpha = 1.0
+      self.setProgress(1.0, animated: true)
+    })
+
+    animator.addCompletion(completion)
+
+    return animator
+  }
+}
+
+extension AppState {
+  func timelineIsInterruptedBeforeTimeout(at date: Date) -> Bool {
+    // Ensure the has been interrupted otherwise return false
+
+    guard timelineIsInterrupted else {
+      return false
+    }
+
+    // Ensure the user has met the serious interruption timeout period otherwise return false
+    guard pausedToInterruptionTimeout >= 0 else {
+      return false
+    }
+
+    // Return whether or not the user's preferred serious interruption timeout period has expired
+    return timeline.countdown.endTime.addingTimeInterval(pausedToInterruptionTimeout) > date
+  }
+
+  var timelineIsInterrupted: Bool {
+    if userActivities.isCountingDown { return false }
+    if timeline.periods.periodAt(userActivities.currentTick).firstTick == userActivities.currentTick { return false }
+
+    return true
+  }
+}
+
+#warning("FIXME: Move into its own module...")
+extension Timeline {
+  enum TimelineObservation: Equatable {
+    enum pausedObservation {
+      case restingAtTickZero
+      case restingAtStartOfWorkPeriod
+      case restingAtStartOfBreak
+      case interrupted
+      case reachedTarget
+    }
+
+    enum runningObservation {
+      case resumedWorkPeriod
+      case resumedBreakPeriod
+      case fromStartOfWorkPeriod
+      case fromStartOfBreakPeriod
+      case transitioningToNextWorkPeriod
+      case transitioningToNextBreakPeriod
+      case inLastPhaseOfWorkPeriod
+      case inLastPhaseOfBreakPeriod
+      case bodyOfWorkPeriod
+      case bodyOfBreakPeriod
+    }
+
+    case paused(pausedObservation)
+    case running(runningObservation)
+  }
+
+  func stance(at tick: Int) -> TimelineObservation {
+    let isCountingDown = countdown.isCountingDown(at: tick)
+    let isPaused = !isCountingDown
+
+    if isPaused, tick == 0 {
+      return .paused(.restingAtTickZero)
+    }
+
+    let currentPeriod = periods.periodAt(tick)
+
+    if isPaused, currentPeriod.firstTick == tick, currentPeriod.isWorkPeriod {
+      return .paused(.restingAtStartOfWorkPeriod)
+    }
+
+    if isPaused, currentPeriod.firstTick == tick, !currentPeriod.isWorkPeriod {
+      return .paused(.restingAtStartOfBreak)
+    }
+
+    if isPaused {
+      return .paused(.interrupted)
+    }
+
+    if isCountingDown,
+       currentPeriod.isWorkPeriod,
+       countdown.startTick == currentPeriod.firstTick,
+       tick <= (currentPeriod.firstTick + 3)
+    {
+      return currentPeriod.isWorkPeriod
+        ? .running(.fromStartOfWorkPeriod)
+        : .running(.fromStartOfBreakPeriod)
+    }
+
+    if isCountingDown,
+       currentPeriod != periods.periodAt(countdown.startTick),
+       tick >= currentPeriod.firstTick,
+       tick <= (currentPeriod.firstTick + 3)
+    {
+      return currentPeriod.isWorkPeriod
+        ? .running(.transitioningToNextWorkPeriod)
+        : .running(.transitioningToNextBreakPeriod)
+    }
+
+    if isCountingDown,
+       currentPeriod.isWorkPeriod,
+       countdown.startTick >= countdown.ticks.lowerBound,
+       tick <= countdown.ticks.lowerBound + 3
+    {
+      return .running(.resumedWorkPeriod)
+    }
+
+    if isCountingDown,
+       tick >= currentPeriod.lastTick - 10,
+       tick <= currentPeriod.lastTick - 10 + 3
+    {
+      return .running(.inLastPhaseOfWorkPeriod)
+    }
+
+    return currentPeriod.isWorkPeriod
+      ? .running(.bodyOfWorkPeriod)
+      : .running(.bodyOfBreakPeriod)
+  }
+}
+
+private extension RingsPopupMenuState {
+  init(appState: AppState) {
+    let stance = appState.timeline.stance(at: appState.userActivities.currentTick)
+
+    // Create placeholder fields to hold the details of a RingsPopupMenu view model
+    let title: String
+    let subtitle: String
+
+    // Depending on the user's stance, fill out the fields accordingly
+    switch stance {
+    case .paused(.restingAtTickZero):
+      title = "Ready to start?"
+      subtitle = "You have 10 work periods remaining."
+
+    case .paused(.restingAtStartOfWorkPeriod):
+      title = "Ready to start another work period?"
+      subtitle = "You have x work periods remaining."
+
+    case .paused(.restingAtStartOfBreak):
+      title = "Ready to take a break?"
+      subtitle = "You have work x hours with y breaks so far."
+
+    case .paused(.reachedTarget):
+      title = "Congratulations! Daily work target reached."
+      subtitle = ""
+
+    case .paused(.interrupted):
+      if let interruption = appState.clarifiedInterruption {
+        let timeDescription = appState.interruptionTime.formatted(date: .omitted, time: .shortened)
+        title = "\(interruption.excuse) at \(timeDescription)"
+        subtitle = "This is your 5th interruption this period."
+      } else {
+        let timeDescription = appState.interruptionTime.formatted(date: .omitted, time: .shortened)
+
+        if appState.clarifiedInterruption == nil,
+           appState.interruptionTime.addingTimeInterval(appState.pausedToInterruptionTimeout) > Date()
+        {
+          title = "Countdown paused at \(timeDescription)"
+          let timeInterval = abs(Int(Date().timeIntervalSince(appState.timeline.countdown.startTime))) + 1
+
+          subtitle = "Paused for \(timeInterval) \(timeInterval == 1 ? "second" : "seconds")."
+        } else {
+          title = "Countdown paused at \(timeDescription)"
+          subtitle = "This is your 5th interruption this period."
+        }
+      }
+
+    case .running(.inLastPhaseOfWorkPeriod):
+      title = "Prepare to wind down work period soon."
+      subtitle = "Next break at \(appState.nextPeriodETA.formatted(date: .omitted, time: .shortened))"
+
+    case .running(.inLastPhaseOfBreakPeriod):
+      title = "Break ends soon."
+      subtitle = "Next work period at \(appState.nextPeriodETA.formatted(date: .omitted, time: .shortened))"
+
+    case .running(.resumedBreakPeriod):
+      title = "Resumed break!"
+      subtitle = "Next work period at \(appState.nextPeriodETA.formatted(date: .omitted, time: .shortened))"
+
+    case .running(.resumedWorkPeriod):
+      title = "Resumed work period!"
+      subtitle = "Next break at \(appState.nextPeriodETA.formatted(date: .omitted, time: .shortened))"
+
+    case .running(.transitioningToNextBreakPeriod):
+      title = "Time for a break!"
+      subtitle = "Next work period at \(appState.nextPeriodETA.formatted(date: .omitted, time: .shortened))"
+
+    case .running(.transitioningToNextWorkPeriod):
+      title = "Time to start work!"
+      subtitle = "Next break at \(appState.nextPeriodETA.formatted(date: .omitted, time: .shortened))"
+
+    case .running(.fromStartOfBreakPeriod):
+      title = "Started break"
+      subtitle = "Next work period at \(appState.nextPeriodETA.formatted(date: .omitted, time: .shortened))"
+
+    case .running(.fromStartOfWorkPeriod):
+      title = "Started work period"
+      subtitle = "Next break period \(appState.nextPeriodETA.formatted(date: .omitted, time: .shortened))"
+
+    case .running(.bodyOfWorkPeriod):
+      title = ""
+      subtitle = "Next break at \(appState.nextPeriodETA.formatted(date: .omitted, time: .shortened))"
+
+    case .running(.bodyOfBreakPeriod):
+      title = ""
+      subtitle = "Next work period at \(appState.nextPeriodETA.formatted(date: .omitted, time: .shortened))"
+    }
+
+    // Create and return a view model using the filled in data fields
+    self.init(title: title, subtitle: subtitle)
+  }
+}
+
+extension AppStore {
+  var menuPopupViewModel: AnyPublisher<RingsPopupMenuState, Never> {
+    $state
+      .map(RingsPopupMenuState.init)
+      .removeDuplicates()
+      .eraseToAnyPublisher()
+  }
+}
+
+extension AppStore {
+  var resumeSoonProgressBarViewModel: AnyPublisher<ResumeSoonProgressBarViewModel?, Never> {
+    $state
+      .map { ($0.timelineIsInterruptedBeforeTimeout(at: Date())) && ($0.clarifiedInterruption == nil)
+        ? ResumeSoonProgressBarViewModel(isVisible: true)
+        : nil
+      }
+      .removeDuplicates()
+      .eraseToAnyPublisher()
+  }
+}
+
+#warning("FIXME: Revisit this ...")
+struct ResumeSoonProgressBarViewModel: Equatable {
+  var isVisible: Bool
+}
