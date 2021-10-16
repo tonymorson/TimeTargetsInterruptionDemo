@@ -28,7 +28,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     Task {
       for await action in interruptionPicker.actions {
-        print (action)
+        print(action)
       }
     }
   }

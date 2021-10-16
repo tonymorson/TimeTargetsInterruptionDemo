@@ -89,14 +89,13 @@ public final class InterruptionPickerViewController: UIViewController {
 
   // Called by the system. Do not call this method directly.
   override public func viewDidDisappear(_ animated: Bool) {
-    
     // Check to see if we are being permmnently dismissed and if so,
     // send a final message to the client and clean up the continuation.
     if isBeingDismissed {
       continuation?.yield(.dismissed)
       continuation?.finish()
     }
-    
+
     // Call super as required by design contract.
     super.viewDidDisappear(animated)
   }

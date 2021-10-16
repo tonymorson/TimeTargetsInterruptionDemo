@@ -1,8 +1,25 @@
 import Foundation
 import UIKit
 
+public struct RingsPopupMenuState: Equatable {
+  public let title: String
+  public let subtitle: String
+
+  public init(title: String = "", subtitle: String = "") {
+    self.title = title
+    self.subtitle = subtitle
+  }
+}
+
 public final class RingsPopupMenuView: UIButton {
-  public var title: (String, UIColor) = ("", .label) {
+  public var viewModel: RingsPopupMenuState {
+    didSet {
+      title = (viewModel.title.isEmpty ? " " : viewModel.title, .red)
+      subtitle = (viewModel.subtitle.isEmpty ? " " : viewModel.subtitle, .label)
+    }
+  }
+
+  var title: (String, UIColor) = ("", .label) {
     didSet {
       DispatchQueue.main.async {
         var title = AttributedString(self.title.0)
@@ -13,7 +30,7 @@ public final class RingsPopupMenuView: UIButton {
     }
   }
 
-  public var subtitle: (String, UIColor) = ("", .label) {
+  var subtitle: (String, UIColor) = ("", .label) {
     didSet {
       DispatchQueue.main.async {
         var title = AttributedString(self.subtitle.0)
@@ -58,6 +75,7 @@ public final class RingsPopupMenuView: UIButton {
   }
 
   override init(frame: CGRect) {
+    viewModel = .init()
     super.init(frame: frame)
   }
 

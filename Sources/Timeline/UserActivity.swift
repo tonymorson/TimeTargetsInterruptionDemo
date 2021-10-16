@@ -37,13 +37,12 @@ public extension TimelineAction {
 
 public func userActivitesReducer(state: inout UserActivitesState, action: TimelineAction) {
   switch action {
- 
   case .pause:
     var timeline = state.latestTimeline
     timeline.pauseCountdown(at: Date.init)
     state.updateCurrentTick(for: Date.init)
     state.history.append(UserActivity(action: .pause, timeline: timeline))
-    
+
   case .resume:
     var timeline = state.latestTimeline
     timeline.resumeCountdown(from: Date.init)
