@@ -13,6 +13,10 @@ public extension UIColor {
     applying(lightness: 1.35)
   }
 
+  var slightyLighter: UIColor? {
+    applying(lightness: 1.50)
+  }
+
   var darker: UIColor? {
     applying(lightness: 0.35)
   }

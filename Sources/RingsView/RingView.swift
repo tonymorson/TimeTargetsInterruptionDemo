@@ -8,7 +8,7 @@ final class RingView: UIView {
   }
 
   var color: UIColor {
-    set { ringLayer.color = newValue.cgColor }
+    set { ringLayer.color = newValue.resolvedColor(with: .init(userInterfaceStyle: traitCollection.userInterfaceStyle)).cgColor }
     get { UIColor(cgColor: ringLayer.color) }
   }
 

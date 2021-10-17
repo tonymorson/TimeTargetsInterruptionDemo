@@ -101,6 +101,7 @@ public final class RingsView: UIView {
     case .alwaysHorizontal: return .horizontal
     case .alongLongestDimension where isPortrait: return .vertical
     case .alongLongestDimension where isLandscape: return .horizontal
+      #warning("Fix fatal error")
     case .alongLongestDimension: fatalError()
     }
   }
@@ -188,8 +189,6 @@ public final class RingsView: UIView {
     pinch.delegate = self
     pan.delegate = self
 
-    backgroundColor = .systemBackground
-
     updateRing(details: state.content)
   }
 
@@ -226,13 +225,13 @@ public final class RingsView: UIView {
 
   private func updateProminentRingDetails() {
     focus.details = self[keyPath: focusRingKeyPath].details
-    focusTrack.color = focus.details.color.darker!
+    focusTrack.color = focus.details.color.slightyDarker!
 
     if focus.details.color == UIColor.systemGray2 {
       switch state.prominentRing {
-      case .period: focus.details.color = .systemRed.slightyDarker!
-      case .session: focus.details.color = .systemGreen.slightyDarker!
-      case .target: focus.details.color = .systemYellow.slightyDarker!
+      case .period: focus.details.color = .systemRed.slightyDarker!.slightyDarker!
+      case .session: focus.details.color = .systemGreen.slightyDarker!.slightyDarker!
+      case .target: focus.details.color = .systemYellow.slightyDarker!.slightyDarker!
       }
     }
 
@@ -916,14 +915,6 @@ final class RingTextView: UIView {
     drawInnerRingText(in: ctx)
   }
 
-  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-    super.traitCollectionDidChange(previousTraitCollection)
-
-    if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
-      layer.setNeedsDisplay()
-    }
-  }
-
   private func drawInnerRingText(in ctx: CGContext) {
     let headlineFontSize = CGFloat(bounds.width) / 4.0
     let font = UIFont(name: "HelveticaNeue-Light", size: headlineFontSize) ??
@@ -933,10 +924,10 @@ final class RingTextView: UIView {
     let smallFont = UIFont(name: "HelveticaNeue-Light", size: smallFontSize) ??
       .systemFont(ofSize: smallFontSize, weight: .thin)
 
-    let smallLabelAttributes = [NSAttributedString.Key.font: smallFont, NSAttributedString.Key.foregroundColor: color]
+    let smallLabelAttributes = [NSAttributedString.Key.font: smallFont, NSAttributedString.Key.foregroundColor: color.resolvedColor(with: .init(userInterfaceStyle: traitCollection.userInterfaceStyle))]
 
     let largeLabelAttributes = [NSAttributedString.Key.font: font,
-                                NSAttributedString.Key.foregroundColor: color]
+                                NSAttributedString.Key.foregroundColor: color.resolvedColor(with: .init(userInterfaceStyle: traitCollection.userInterfaceStyle))]
 
     let valueDescription = NSAttributedString(string: content.value, attributes: largeLabelAttributes)
     let valueBounds = stringBounds(string: valueDescription, ctx: ctx)
@@ -991,10 +982,6 @@ final class LabelView: UIView {
     didSet { layer.setNeedsDisplay() }
   }
 
-  var textColor: UIColor = .label {
-    didSet { layer.setNeedsDisplay() }
-  }
-
   override init(frame: CGRect) {
     super.init(frame: frame)
 
@@ -1021,13 +1008,6 @@ final class LabelView: UIView {
     drawCaption(in: ctx)
   }
 
-  override public func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-    super.traitCollectionDidChange(previousTraitCollection)
-    if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
-      layer.setNeedsDisplay()
-    }
-  }
-
   private func drawCaption(in ctx: CGContext) {
     let fontSize = CGFloat(bounds.height)
     let smallFont = UIFont(name: "HelveticaNeue-Light", size: fontSize) ??
@@ -1035,7 +1015,14 @@ final class LabelView: UIView {
 
     let captionAttributes = [
       NSAttributedString.Key.font: smallFont,
-      NSAttributedString.Key.foregroundColor: textColor,
+
+      // Pick out a text color suitable for the current theme.
+      // We are doing this here because we can't rely on traitCollectionDidChange
+      // to update us proerly when overrideUserInterfaceStyle value is set.
+      // https://stackoverflow.com/questions/58557847/ios-13-dark-mode-traitcollectiondidchange-only-called-the-first-time
+      NSAttributedString.Key.foregroundColor: traitCollection.userInterfaceStyle.rawValue == 1
+        ? UIColor.darkText
+        : .white,
     ]
 
     let caption = NSAttributedString(string: text, attributes: captionAttributes)

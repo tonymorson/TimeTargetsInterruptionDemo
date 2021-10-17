@@ -8,8 +8,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     guard let scene = (scene as? UIWindowScene) else { return }
 
     let window = UIWindow(windowScene: scene)
-    window.backgroundColor = .systemBackground
+
     window.rootViewController = AppViewController(nibName: nil, bundle: nil)
+
+    // Style the window and root view to the appripriate choices so we get the standard look
+    // and feel when presenting more view controlelrs later on.
+    window.overrideUserInterfaceStyle = .dark
+    window.backgroundColor = .black
+    window.rootViewController?.view.backgroundColor = .systemBackground
+
     window.makeKeyAndVisible()
 
     self.window = window

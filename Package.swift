@@ -95,7 +95,7 @@ let package = Package(
     ),
     .target(
       name: "SettingsEditor",
-      dependencies: ["NotificationSettingsEditor"]
+      dependencies: ["Durations", "NotificationSettingsEditor"]
     ),
     .target(
       name: "SwiftUIKit",

@@ -2,7 +2,19 @@ import Combine
 import SettingsEditor
 import UIKit
 
-let settings = CurrentValueSubject<SettingsEditorState, Never>(.init())
+let initialValue = SettingsEditorState(appearance: .dark,
+                                       neverSleep: true,
+                                       notifications: .init(),
+                                       periods: .init(periodDuration: 25.minutes,
+                                                      shortBreakDuration: 5.minutes,
+                                                      longBreakDuration: 10.minutes,
+                                                      longBreakFrequency: 4,
+                                                      dailyTarget: 10,
+                                                      pauseBeforeStartingWorkPeriods: true,
+                                                      pauseBeforeStartingBreaks: true,
+                                                      resetWorkPeriodOnStop: true))
+
+let settings = CurrentValueSubject<SettingsEditorState, Never>(initialValue)
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   var cancellables: Set<AnyCancellable> = []
@@ -23,6 +35,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     let window = UIWindow(windowScene: scene)
     window.rootViewController = editor
     window.makeKeyAndVisible()
+
+    window.overrideUserInterfaceStyle = .dark
 
     self.window = window
   }

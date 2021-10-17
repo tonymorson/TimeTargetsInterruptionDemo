@@ -69,7 +69,7 @@ public func userActivitesReducer(state: inout UserActivitesState, action: Timeli
     state.history.append(UserActivity(action: .resetTimelineToTickZero, timeline: timeline))
     state.updateCurrentTick(for: Date.init)
 
-  case .changedTimeline:
-    break
+  case let .changedTimeline(timeline):
+    state.history.append(UserActivity(action: .changedTimeline(timeline), timeline: timeline))
   }
 }

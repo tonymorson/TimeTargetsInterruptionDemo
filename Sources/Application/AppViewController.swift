@@ -1,5 +1,6 @@
 import Combine
 import InterruptionPicker
+import NotificationSettingsEditor
 import RingsPopupMenu
 import RingsView
 import SettingsEditor
@@ -7,6 +8,23 @@ import SwiftUIKit
 import Timeline
 import TimelineReports
 import UIKit
+
+#warning("TODO:")
+// Notes
+// - Rework settings reducing as some actions are not being used eg. .timeline(.changedTimeline)
+// - Make navigation its own module?
+// - Audit popup menu items
+// - Make message center module?
+// - Move bottomMenuPopupProgressBar into message center module
+// - Move app toolbar into its own module...
+// - Move activity log view into its own module...
+// - Move ActivityLogHeading into its own module
+// - Move UIProgressView into message module?
+// - Move TimelineObservation enum into Timeline module?
+// - Fix case .running(.resumedBreakPeriod) wording
+// - Fix case .running(.resumedWorkPeriod) wording
+// - Revisit ResumeSoonProgressBarViewModel struct
+// - Revisit changedTimeline(Timeline) (timeline is somewhat redundent here)
 
 private struct RingsLayoutPair: Equatable {
   public var landscape: RingsViewLayout
@@ -52,7 +70,10 @@ public enum NavigationTabIdentifier: Codable {
 }
 
 private struct AppState: Equatable {
+  var appearance: Appearance
+  var neverSleep: Bool
   var columnDisplayMode: DisplayMode
+  var notificationSettings: NotificationSettingsEditorState
   var navigationPath: NavigationPath?
   var preferredRingsLayoutInSingleColumnMode: RingsLayoutPair
   var preferredRingsLayoutInDoubleColumnModeMode: RingsViewLayout
@@ -63,7 +84,10 @@ private struct AppState: Equatable {
   var clarifiedInterruption: Interruption?
 
   init() {
+    appearance = .dark
+    neverSleep = true
     columnDisplayMode = .singleColumn
+    notificationSettings = .init()
     preferredRingsLayoutInSingleColumnMode = .init()
     preferredRingsLayoutInDoubleColumnModeMode = .init(acentricAxis: .alwaysVertical,
                                                        concentricity: 1.0,
@@ -75,14 +99,37 @@ private struct AppState: Equatable {
     userActivities = .init(history: [])
   }
 
-  #warning("FIXME: Initiate a proper SettingsEditorState value here...")
   var settings: SettingsEditorState {
     set {
       pausedToInterruptionTimeout = newValue.interruptionTimeout
+
+      if settings.periods != newValue.periods {
+        let periods = newValue.periods
+        var timeline = Timeline(countdown: timeline.countdown,
+                                dailyTarget: periods.dailyTarget,
+                                resetWorkOnStop: periods.resetWorkPeriodOnStop,
+                                periods: WorkPattern(work: periods.workPeriodDuration,
+                                                     shortBreak: periods.shortBreakDuration,
+                                                     longBreak: periods.longBreakDuration,
+                                                     repeating: periods.longBreakFrequency - 1),
+                                stopOnBreak: periods.pauseBeforeStartingBreaks,
+                                stopOnWork: periods.pauseBeforeStartingWorkPeriods)
+
+        timeline.countdown.ticks = timeline.countdown.startTick ... timeline.nextStopTick(at: Date.init)
+        userActivitesReducer(state: &userActivities, action: .changedTimeline(timeline))
+      }
+
+      notificationSettings = newValue.notifications
+      neverSleep = newValue.neverSleep
+      appearance = newValue.appearance
     }
 
     get {
-      var settings = SettingsEditorState()
+      var settings = SettingsEditorState(appearance: appearance,
+                                         neverSleep: neverSleep,
+                                         notifications: notificationSettings,
+                                         periods: .init(timeline: timeline))
+
       settings.interruptionTimeout = pausedToInterruptionTimeout
 
       return settings
@@ -99,7 +146,6 @@ private struct AppState: Equatable {
           tick: userActivities.currentTick)
   }
 
-  #warning("FIXME: Get this working again...")
   var popupMenuItems: [UIMenuElement] {
     let isCountingDown = userActivities.isCountingDown
     let isWorkTime = report.currentPeriod.isWorkPeriod
@@ -195,9 +241,9 @@ private struct AppState: Equatable {
       sessionColor = .green
       targetColor = .yellow
     } else {
-      periodColor = .systemGray2
-      sessionColor = .systemGray2
-      targetColor = .systemGray2
+      periodColor = .systemGray4
+      sessionColor = .systemGray4
+      targetColor = .systemGray4
     }
 
     return .init(period: .init(color: periodColor,
@@ -251,8 +297,6 @@ private struct AppState: Equatable {
           prominentRing: prominentlyDisplayedRing)
   }
 }
-
-#warning("TODO: Make navigation its own module?")
 
 public enum NavigationAction: Equatable, Codable {
   case settingsEditorDismissed
@@ -492,7 +536,7 @@ private func appReducer(state: inout AppState, action: AppAction) -> Effect {
     }
 
   case .timeline(.changedTimeline):
-    break
+    fatalError()
 
   case let .interruptionTapped(interruption):
     state.clarifiedInterruption = interruption
@@ -507,6 +551,7 @@ private func appReducer(state: inout AppState, action: AppAction) -> Effect {
 
 var cancellablePropertyAnimator: UIViewPropertyAnimator?
 
+@MainActor
 public class AppViewController: UIViewController {
   var cancellables: Set<AnyCancellable> = []
 
@@ -521,6 +566,9 @@ public class AppViewController: UIViewController {
 
   override public func viewDidLoad() {
     super.viewDidLoad()
+
+    overrideUserInterfaceStyle = .dark
+    view.backgroundColor = .systemBackground
 
     view.tintColor = .systemRed
 
@@ -676,40 +724,52 @@ public class AppViewController: UIViewController {
       }
       .store(in: &cancellables)
 
-    store.$state.map { state -> CGFloat in
-      (state.columnDisplayMode == .doubleColumn) && self.view.isPortrait && self.traitCollection.horizontalSizeClass == .compact ? 1.0 : 0.0
-    }
-    .removeDuplicates()
-    .assign(to: \.alpha, on: tabBar)
-    .store(in: &cancellables)
+    store.$state
+      .map { state -> CGFloat in
 
-    store.$state.removeDuplicates().sink { [weak self] in
-      guard let self = self else { return }
-      let isShowingData = $0.columnDisplayMode == .doubleColumn
-
-      self.noShowDataLayoutMode = self.traitCollection.horizontalSizeClass == .compact
-        ? self.singleColumnRingsOnly
-        : self.singleColumnRingsOnly
-
-      let x = $0.selectedDataTab == .today ? self.doubleColumnRingsLeft : self.doubleColumnRingsRight
-      self.showDataLayoutMode = self.traitCollection.horizontalSizeClass == .compact
-        ? self.view.isPortrait ? self.compactWidthLayout2 : x
-        : x
-
-      NSLayoutConstraint.deactivate(self.singleColumnRingsOnly)
-      NSLayoutConstraint.deactivate(self.compactWidthLayout)
-      NSLayoutConstraint.deactivate(self.compactWidthLayout2)
-      NSLayoutConstraint.deactivate(self.normalWidthLayout)
-      NSLayoutConstraint.deactivate(self.doubleColumnRingsLeft)
-      NSLayoutConstraint.deactivate(self.doubleColumnRingsRight)
-
-      if isShowingData {
-        NSLayoutConstraint.activate(self.showDataLayoutMode)
-      } else {
-        NSLayoutConstraint.activate(self.singleColumnRingsOnly)
+//        self.view.backgroundColor = state.report.currentPeriod.isWorkPeriod
+//          ? .systemRed.lighter!.lighter!
+//        : .systemOrange.lighter!.lighter!.slightyLighter!
+//
+//        if state.userActivities.isCountingDown == false {
+//          self.view.backgroundColor = .systemBackground
+//        }
+//
+        (state.columnDisplayMode == .doubleColumn) && self.view.isPortrait && self.traitCollection.horizontalSizeClass == .compact ? 1.0 : 0.0
       }
-    }
-    .store(in: &cancellables)
+      .removeDuplicates()
+      .assign(to: \.alpha, on: tabBar)
+      .store(in: &cancellables)
+
+    store.$state
+      .removeDuplicates()
+      .sink { [weak self] in
+        guard let self = self else { return }
+        let isShowingData = $0.columnDisplayMode == .doubleColumn
+
+        self.noShowDataLayoutMode = self.traitCollection.horizontalSizeClass == .compact
+          ? self.singleColumnRingsOnly
+          : self.singleColumnRingsOnly
+
+        let x = $0.selectedDataTab == .today ? self.doubleColumnRingsLeft : self.doubleColumnRingsRight
+        self.showDataLayoutMode = self.traitCollection.horizontalSizeClass == .compact
+          ? self.view.isPortrait ? self.compactWidthLayout2 : x
+          : x
+
+        NSLayoutConstraint.deactivate(self.singleColumnRingsOnly)
+        NSLayoutConstraint.deactivate(self.compactWidthLayout)
+        NSLayoutConstraint.deactivate(self.compactWidthLayout2)
+        NSLayoutConstraint.deactivate(self.normalWidthLayout)
+        NSLayoutConstraint.deactivate(self.doubleColumnRingsLeft)
+        NSLayoutConstraint.deactivate(self.doubleColumnRingsRight)
+
+        if isShowingData {
+          NSLayoutConstraint.activate(self.showDataLayoutMode)
+        } else {
+          NSLayoutConstraint.activate(self.singleColumnRingsOnly)
+        }
+      }
+      .store(in: &cancellables)
 
     store.menuPopupViewModel
       .removeDuplicates()
@@ -801,6 +861,37 @@ public class AppViewController: UIViewController {
         }
       }
       .store(in: &cancellables)
+
+    store.$state
+      .map(\.appearance)
+      .removeDuplicates()
+      .receive(on: DispatchQueue.main)
+      .map { theme -> UIUserInterfaceStyle in
+        switch theme {
+        case .dark:
+          return .dark
+        case .light:
+          return .light
+        case .auto:
+          return .unspecified
+        }
+      }
+      .sink { theme in
+        UIView.animate(withDuration: 0.5) {
+          UIApplication.shared.keyWindow?.overrideUserInterfaceStyle = theme
+          self.overrideUserInterfaceStyle = theme
+        }
+      }
+      .store(in: &cancellables)
+
+    store.$state
+      .map(\.shouldStayAwake)
+      .removeDuplicates()
+      .receive(on: DispatchQueue.main)
+      .sink { shouldStawyAwake in
+        UIApplication.shared.isIdleTimerDisabled = shouldStawyAwake
+      }
+      .store(in: &cancellables)
   }
 
   override public func willTransition(to newCollection: UITraitCollection, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -856,8 +947,6 @@ public class AppViewController: UIViewController {
   private lazy var bottomMenuPopup: RingsPopupMenuView = {
     RingsPopupMenuView()
   }()
-
-  #warning("FIXME: Move this into MessageCenter module..")
 
   private var bottomMenuPopupProgressBar: UIProgressView? {
     didSet {
@@ -1257,7 +1346,6 @@ extension UIAction {
   }
 }
 
-#warning("FIXME: Move into its own module...")
 final class AppToolbar: UIView {
   override init(frame _: CGRect) {
     super.init(frame: .zero)
@@ -1325,7 +1413,6 @@ final class AppToolbar: UIView {
   }
 }
 
-#warning("FIXME: Move into its own module...")
 final class ActivityLog: UIView {
   var cancellables = Set<AnyCancellable>()
 
@@ -1355,11 +1442,14 @@ final class ActivityLog: UIView {
       logEntry.trailingAnchor.constraint(equalTo: parent.trailingAnchor, constant: 20)
     }
 
-    store.$state.map(\.userActivities).map { userActivities -> String in
-      "\(userActivities.history.count) user events so far... (Last event: \(userActivities.history.last?.action.logName ?? "None"))"
-    }
-    .assign(to: \.text, on: logEntry)
-    .store(in: &cancellables)
+    store.$state
+      .map(\.userActivities.history)
+      .removeDuplicates()
+      .map { history -> String in
+        "\(history.count) user events so far... (Last event: \(history.last?.action.logName ?? "None"))"
+      }
+      .assign(to: \.text, on: logEntry)
+      .store(in: &cancellables)
   }
 
   @available(*, unavailable)
@@ -1368,7 +1458,6 @@ final class ActivityLog: UIView {
   }
 }
 
-#warning("FIXME: Move into its own module...")
 final class ActivityLogHeading: UIView {
   var cancellables: Set<AnyCancellable> = []
 
@@ -1426,39 +1515,39 @@ final class FixedTabBar: UITabBar {
   }
 }
 
-public struct RingsContent: Equatable {
-  public struct RingContent: Equatable {
-    let ringTitle: String
-    let ringSubTitle: String
-    let progress: Double
-    let progressDescription: String
-    let descriptionCaption: String
-    let progressIndicatorColor: UIColor
-    var trackColor: UIColor
-    let estimatedTimeToCompleteDescription: String
-
-    public init(ringTitle: String, ringSubTitle: String, progress: Double, progressDescription: String, descriptionCaption: String, progressIndicatorColor: UIColor, trackColor: UIColor, estimatedTimeToCompleteDescription: String) {
-      self.ringTitle = ringTitle
-      self.ringSubTitle = ringSubTitle
-      self.progress = progress
-      self.progressDescription = progressDescription
-      self.descriptionCaption = descriptionCaption
-      self.progressIndicatorColor = progressIndicatorColor
-      self.trackColor = trackColor
-      self.estimatedTimeToCompleteDescription = estimatedTimeToCompleteDescription
-    }
-  }
-
-  let outer: RingContent
-  let center: RingContent
-  let inner: RingContent
-
-  public init(outer: RingContent, center: RingContent, inner: RingContent) {
-    self.outer = outer
-    self.center = center
-    self.inner = inner
-  }
-}
+// public struct RingsContent: Equatable {
+//  public struct RingContent: Equatable {
+//    let ringTitle: String
+//    let ringSubTitle: String
+//    let progress: Double
+//    let progressDescription: String
+//    let descriptionCaption: String
+//    let progressIndicatorColor: UIColor
+//    var trackColor: UIColor
+//    let estimatedTimeToCompleteDescription: String
+//
+//    public init(ringTitle: String, ringSubTitle: String, progress: Double, progressDescription: String, descriptionCaption: String, progressIndicatorColor: UIColor, trackColor: UIColor, estimatedTimeToCompleteDescription: String) {
+//      self.ringTitle = ringTitle
+//      self.ringSubTitle = ringSubTitle
+//      self.progress = progress
+//      self.progressDescription = progressDescription
+//      self.descriptionCaption = descriptionCaption
+//      self.progressIndicatorColor = progressIndicatorColor
+//      self.trackColor = trackColor
+//      self.estimatedTimeToCompleteDescription = estimatedTimeToCompleteDescription
+//    }
+//  }
+//
+//  let outer: RingContent
+//  let center: RingContent
+//  let inner: RingContent
+//
+//  public init(outer: RingContent, center: RingContent, inner: RingContent) {
+//    self.outer = outer
+//    self.center = center
+//    self.inner = inner
+//  }
+// }
 
 extension AppState {
   var nextPeriodETA: Date {
@@ -1499,7 +1588,6 @@ extension AppAction {
   }
 }
 
-#warning("FIXME: Move into its own module...")
 extension UIProgressView {
   func animator(duration: TimeInterval,
                 completion: @escaping (UIViewAnimatingPosition) -> Void) -> UIViewPropertyAnimator
@@ -1540,7 +1628,6 @@ extension AppState {
   }
 }
 
-#warning("FIXME: Move into its own module...")
 extension Timeline {
   enum TimelineObservation: Equatable {
     enum pausedObservation {
@@ -1745,7 +1832,25 @@ extension AppStore {
   }
 }
 
-#warning("FIXME: Revisit this ...")
 struct ResumeSoonProgressBarViewModel: Equatable {
   var isVisible: Bool
+}
+
+extension SettingsEditorState.PeriodSettings {
+  init(timeline: Timeline) {
+    self.init(periodDuration: timeline.periods.work,
+              shortBreakDuration: timeline.periods.shortBreak,
+              longBreakDuration: timeline.periods.longBreak,
+              longBreakFrequency: timeline.periods.numWorkPeriods,
+              dailyTarget: timeline.dailyTarget,
+              pauseBeforeStartingWorkPeriods: timeline.stopOnWork,
+              pauseBeforeStartingBreaks: timeline.stopOnBreak,
+              resetWorkPeriodOnStop: timeline.resetWorkOnStop)
+  }
+}
+
+extension AppState {
+  var shouldStayAwake: Bool {
+    settings.neverSleep && userActivities.isCountingDown
+  }
 }

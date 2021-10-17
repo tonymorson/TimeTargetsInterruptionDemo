@@ -6,5 +6,5 @@ public enum TimelineAction: Equatable, Codable {
   case resetTimelineToTickZero
   case resume
   case skipCurrentPeriod
-  case changedTimeline
+  case changedTimeline(Timeline)
 }

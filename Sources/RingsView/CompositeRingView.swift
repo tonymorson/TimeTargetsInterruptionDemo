@@ -138,12 +138,4 @@ final class CaptionView: UIView {
     caption.draw(at: CGPoint(x: (bounds.width / 2) - (captionBounds.width / 2),
                              y: 0))
   }
-
-  override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-    super.traitCollectionDidChange(previousTraitCollection)
-
-    if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
-      layer.setNeedsDisplay()
-    }
-  }
 }

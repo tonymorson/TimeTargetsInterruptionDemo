@@ -1,39 +1,70 @@
 import Combine
+import Durations
 import Foundation
 import NotificationSettingsEditor
 import SwiftUIKit
 import UIKit
 
+public enum Appearance: Int, Codable, Equatable { case dark, light, auto }
+
 public struct SettingsEditorState: Equatable {
   public struct PeriodSettings: Equatable {
-    public var periodDuration: Int = 15
-    public var shortBreakDuration: Int = 5
-    public var longBreakDuration: Int = 10
+    public var workPeriodDuration: Duration
+    public var shortBreakDuration: Duration
+    public var longBreakDuration: Duration
 
-    public var longBreakFrequency: Int = 4
-    public var dailyTarget: Int = 10
+    public var longBreakFrequency: Int
+    public var dailyTarget: Int
 
-    public var pauseBeforeStartingWorkPeriods: Bool = false
-    public var pauseBeforeStartingBreaks: Bool = false
-    public var resetWorkPeriodOnStop: Bool = true
+    public var pauseBeforeStartingWorkPeriods: Bool
+    public var pauseBeforeStartingBreaks: Bool
+    public var resetWorkPeriodOnStop: Bool
+
+    public init(periodDuration: Duration,
+                shortBreakDuration: Duration,
+                longBreakDuration: Duration,
+                longBreakFrequency: Int,
+                dailyTarget: Int,
+                pauseBeforeStartingWorkPeriods: Bool,
+                pauseBeforeStartingBreaks: Bool,
+                resetWorkPeriodOnStop: Bool)
+    {
+      workPeriodDuration = periodDuration
+      self.shortBreakDuration = shortBreakDuration
+      self.longBreakDuration = longBreakDuration
+      self.longBreakFrequency = longBreakFrequency
+      self.dailyTarget = dailyTarget
+      self.pauseBeforeStartingWorkPeriods = pauseBeforeStartingWorkPeriods
+      self.pauseBeforeStartingBreaks = pauseBeforeStartingBreaks
+      self.resetWorkPeriodOnStop = resetWorkPeriodOnStop
+    }
   }
 
-  public enum Appearance: Int, Codable { case dark, light, auto }
+  public var appearance: Appearance
+  public var neverSleep: Bool
+  public var notifications: NotificationSettingsEditorState
+  public var periods: PeriodSettings
 
-  public var appearance: Appearance = .dark
-  public var neverSleep: Bool = true
-  public var notifications: NotificationSettingsEditorState = .init()
-  public var periods: PeriodSettings = .init()
+  public var interruptionTimeout: Double
 
-  public var interruptionTimeout: Double = 3
-
-  public init() {}
+  public init(appearance: Appearance,
+              neverSleep: Bool,
+              notifications: NotificationSettingsEditorState,
+              periods: SettingsEditorState.PeriodSettings,
+              interruptionTimeout: Double = 3)
+  {
+    self.appearance = appearance
+    self.neverSleep = neverSleep
+    self.notifications = notifications
+    self.periods = periods
+    self.interruptionTimeout = interruptionTimeout
+  }
 }
 
 public enum SettingsEditorAction: Equatable, Codable {
-  case workDurationTapped(Int)
-  case shortBreakDurationTapped(Int)
-  case longBreakDurationTapped(Int)
+  case workDurationTapped(Duration)
+  case shortBreakDurationTapped(Duration)
+  case longBreakDurationTapped(Duration)
 
   case longBreaksFrequencyTapped(Int)
   case dailyTargetTapped(Int)
@@ -42,7 +73,7 @@ public enum SettingsEditorAction: Equatable, Codable {
   case pauseBeforeBreakTapped(Bool)
   case resetWorkPeriodOnStopTapped(Bool)
 
-  case themeTapped(SettingsEditorState.Appearance)
+  case themeTapped(Appearance)
   case neverSleepTapped(Bool)
 
   case notification(NotificationSettingsEditorAction)
@@ -55,7 +86,7 @@ public func settingsEditorReducer(state: inout SettingsEditorState,
 {
   switch action {
   case let .workDurationTapped(value):
-    state.periods.periodDuration = value
+    state.periods.workPeriodDuration = value
   case let .shortBreakDurationTapped(value):
     state.periods.shortBreakDuration = value
   case let .longBreakDurationTapped(value):
@@ -75,9 +106,7 @@ public func settingsEditorReducer(state: inout SettingsEditorState,
   case let .neverSleepTapped(value):
     state.neverSleep = value
   case let .notification(action):
-    notificationSettingsEditorReducer(state: &state.notifications,
-                                      action: action,
-                                      environment: NotificationSettingsEditorEnvironment())
+    notificationSettingsEditorReducer(state: &state.notifications, action: action)
   case let .interruptionTimeoutTapped(timeout):
     state.interruptionTimeout = timeout ?? -1
   }
@@ -114,22 +143,22 @@ final class SettingsEditorForm: Form<SettingsEditorState> {
       Section(header: "Time Management") {
         Picker("Work Period",
                subtitle: "Duration",
-               selection: stateOverTime.map(\.periods.periodDuration).eraseToAnyPublisher(),
-               values: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60],
-               valueTitle: minuteText) { actions.send(.workDurationTapped($0)) }
+               selection: stateOverTime.map(\.periods.workPeriodDuration).eraseToAnyPublisher(),
+               values: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(\.minutes),
+               valueTitle: durationText) { actions.send(.workDurationTapped($0)) }
 
         Picker("Short Break",
                subtitle: "Duration",
                selection: stateOverTime.map(\.periods.shortBreakDuration).eraseToAnyPublisher(),
-               values: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60],
-               valueTitle: minuteText) { actions.send(.shortBreakDurationTapped($0)) }
+               values: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(\.minutes),
+               valueTitle: durationText) { actions.send(.shortBreakDurationTapped($0)) }
 
         Picker("Long Break",
                subtitle: "Duration",
                selection: stateOverTime
                  .map(\.periods.longBreakDuration).eraseToAnyPublisher(),
-               values: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60],
-               valueTitle: minuteText) { actions.send(.longBreakDurationTapped($0)) }
+               values: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].map(\.minutes),
+               valueTitle: durationText) { actions.send(.longBreakDurationTapped($0)) }
       }
 
       Section(header: "Sessions & Targets") {
@@ -165,7 +194,7 @@ final class SettingsEditorForm: Form<SettingsEditorState> {
         }
       }
 
-      Section(header: "Pauses & Interruptions") {
+      Section(header: "Activity Logs") {
         Picker("Ask About Pauses",
                subtitle: "Trigger an interruption after a pause",
                selection: stateOverTime.map(\.interruptionTimeout).eraseToAnyPublisher(),
@@ -176,13 +205,6 @@ final class SettingsEditorForm: Form<SettingsEditorState> {
                  return "Longer than \(Int(duration)) Secs"
 
                }) { actions.send(.interruptionTimeoutTapped($0)) }
-
-        if currentState.interruptionTimeout != -1 {
-          Toggle(title: "Enforce Interruption Logging",
-                 isOn: Just(true).eraseToAnyPublisher()) {
-            actions.send(.pauseBeforeWorkPeriodTapped($0))
-          }
-        }
       }
 
       Section(header: "Alerts") {
@@ -216,7 +238,7 @@ final class SettingsEditorForm: Form<SettingsEditorState> {
   }
 }
 
-private extension SettingsEditorState.Appearance {
+private extension Appearance {
   var title: String {
     switch self {
     case .dark: return "Dark"
@@ -226,14 +248,14 @@ private extension SettingsEditorState.Appearance {
   }
 }
 
-private func themeTitle(value: SettingsEditorState.Appearance) -> String {
+private func themeTitle(value: Appearance) -> String {
   value.title
 }
 
-private func minuteText(_ value: Int) -> String {
-  value == 60
+private func durationText(_ value: Duration) -> String {
+  value.asMinutes == 60
     ? " 1 Hour"
-    : "\(String(value)) Minutes"
+    : "\(String(Int(value.asMinutes))) Minutes"
 }
 
 private class NotificationSettingsRow: UITableViewCell, CellPickable {

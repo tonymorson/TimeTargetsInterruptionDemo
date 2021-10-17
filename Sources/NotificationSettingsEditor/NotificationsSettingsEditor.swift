@@ -36,13 +36,8 @@ public enum NotificationSettingsEditorAction: Equatable, Codable {
   case onReachingDailyTargetToggled(Bool)
 }
 
-public struct NotificationSettingsEditorEnvironment {
-  public init() {}
-}
-
 public func notificationSettingsEditorReducer(state: inout NotificationSettingsEditorState,
-                                              action: NotificationSettingsEditorAction,
-                                              environment _: NotificationSettingsEditorEnvironment)
+                                              action: NotificationSettingsEditorAction)
 {
   switch action {
   case let .showNotificationsToggled(value):
