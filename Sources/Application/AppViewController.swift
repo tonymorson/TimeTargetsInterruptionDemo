@@ -25,6 +25,7 @@ import UIKit
 // - Fix case .running(.resumedWorkPeriod) wording
 // - Revisit ResumeSoonProgressBarViewModel struct
 // - Revisit changedTimeline(Timeline) (timeline is somewhat redundent here)
+// - Bring back notifications!
 
 private struct RingsLayoutPair: Equatable {
   public var landscape: RingsViewLayout
@@ -61,8 +62,8 @@ private enum DisplayMode {
 }
 
 enum NavigationPath: Equatable {
-  case interruptionPicker(InterruptionPickerState, Date)
-  case settingsEditor(SettingsEditorState)
+  case interruptionSheet(InterruptionPickerState, Date)
+  case settingsViewController(SettingsEditorState)
 }
 
 public enum NavigationTabIdentifier: Codable {
@@ -74,7 +75,7 @@ private struct AppState: Equatable {
   var neverSleep: Bool
   var columnDisplayMode: DisplayMode
   var notificationSettings: NotificationSettingsEditorState
-  var navigationPath: NavigationPath?
+  var route: NavigationPath?
   var preferredRingsLayoutInSingleColumnMode: RingsLayoutPair
   var preferredRingsLayoutInDoubleColumnModeMode: RingsViewLayout
   var prominentlyDisplayedRing: RingIdentifier
@@ -339,7 +340,7 @@ private class AppStore {
   var settings: AnyPublisher<SettingsEditorState?, Never> {
     $state
       .map { state -> SettingsEditorState? in
-        if case let .settingsEditor(editorState) = state.navigationPath {
+        if case let .settingsViewController(editorState) = state.route {
           return editorState
         }
 
@@ -442,11 +443,11 @@ private func appReducer(state: inout AppState, action: AppAction) -> Effect {
         let scopeIdentifier = 0
         let title = "Significant interruption at \(state.interruptionTime.formatted(date: .omitted, time: .shortened))"
         let subtitle = "Provide reason for interruption?"
-        state.navigationPath = .interruptionPicker(.init(scopeIdentifier: scopeIdentifier,
-                                                         title: title,
-                                                         subtitle: subtitle), Date().addingTimeInterval(state.pausedToInterruptionTimeout))
+        state.route = .interruptionSheet(.init(scopeIdentifier: scopeIdentifier,
+                                               title: title,
+                                               subtitle: subtitle), Date().addingTimeInterval(state.pausedToInterruptionTimeout))
       } else {
-        state.navigationPath = nil
+        state.route = nil
       }
 
       let stateCpy = state
@@ -475,16 +476,16 @@ private func appReducer(state: inout AppState, action: AppAction) -> Effect {
 
   case let .settingsEditor(action):
     settingsEditorReducer(state: &state.settings, action: action)
-    state.navigationPath = .settingsEditor(state.settings)
+    state.route = .settingsViewController(state.settings)
 
   case .showDataButtonTapped:
     state.columnDisplayMode.toggle()
 
   case .navigation(.settingsEditorSummoned):
-    state.navigationPath = .settingsEditor(state.settings)
+    state.route = .settingsViewController(state.settings)
 
   case .navigation(.settingsEditorDismissed):
-    state.navigationPath = nil
+    state.route = nil
 
   case let .tabBarItemTapped(tab):
     state.selectedDataTab = tab
@@ -540,10 +541,10 @@ private func appReducer(state: inout AppState, action: AppAction) -> Effect {
 
   case let .interruptionTapped(interruption):
     state.clarifiedInterruption = interruption
-    state.navigationPath = nil
+    state.route = nil
 
   case .navigation(.interruptionPickerDismissed):
-    state.navigationPath = nil
+    state.route = nil
   }
 
   return .none
@@ -805,10 +806,10 @@ public class AppViewController: UIViewController {
 
     // Triggered when global state changes its InterruptionPickerState.
     store.$state
-      .map(\.navigationPath)
-      .map { navigation -> InterruptionPickerState? in
-        switch navigation {
-        case let .interruptionPicker(state, date):
+      .map(\.route)
+      .map { route -> InterruptionPickerState? in
+        switch route {
+        case let .interruptionSheet(state, date):
           if Date() > date {
             return Optional(state)
           } else {
