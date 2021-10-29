@@ -7,6 +7,6 @@ public func tickEffect(for timeline: Timeline, at tick: Tick, on scheduler: AnyS
   struct TimerId: Hashable {}
 
   return timeline.countdown.isCountingDown(at: tick)
-    ? Effect.timer(id: TimerId(), every: 1, on: scheduler) .cancellable(id: TimerId(), cancelInFlight: true)
+    ? Effect.timer(id: TimerId(), every: 1, on: scheduler).cancellable(id: TimerId(), cancelInFlight: true)
     : .cancel(id: TimerId())
 }

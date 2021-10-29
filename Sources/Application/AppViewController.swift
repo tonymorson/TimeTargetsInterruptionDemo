@@ -389,9 +389,9 @@ var cancellables: Set<AnyCancellable> = []
 private let appReducer = Reducer.combine(
   Reducer<AppState, AppAction, Void> { state, action, _ in
     switch action {
-    case let .ringsView(action, whilePortrait):
+    case .ringsView(let action, let whilePortrait):
       switch action {
-      case let .acentricRingsPinched(scaleFactor: scaleFactor):
+      case .acentricRingsPinched(scaleFactor: let scaleFactor):
         switch state.columnDisplayMode {
         case .singleColumn:
           if whilePortrait {
@@ -403,7 +403,7 @@ private let appReducer = Reducer.combine(
           state.preferredRingsLayoutInDoubleColumnModeMode.scaleFactorWhenFullyAcentric = scaleFactor
         }
 
-      case let .concentricRingsPinched(scaleFactor: scaleFactor):
+      case .concentricRingsPinched(scaleFactor: let scaleFactor):
         switch state.columnDisplayMode {
         case .singleColumn:
           if whilePortrait {
@@ -422,7 +422,7 @@ private let appReducer = Reducer.combine(
         case .target: state.prominentlyDisplayedRing = .period
         }
 
-      case let .ringConcentricityDragged(concentricity: concentricity):
+      case .ringConcentricityDragged(concentricity: let concentricity):
         switch state.columnDisplayMode {
         case .singleColumn:
           if whilePortrait {
@@ -484,7 +484,7 @@ private let appReducer = Reducer.combine(
     case .ringsVieww:
       break
 
-    case let .settingsEditor(action):
+    case .settingsEditor(let action):
       settingsEditorReducer(state: &state.settings, action: action)
       state.route = .settingsModal
 
@@ -497,7 +497,7 @@ private let appReducer = Reducer.combine(
     case .navigation(.settingsEditorDismissed):
       state.route = nil
 
-    case let .tabBarItemTapped(tab):
+    case .tabBarItemTapped(let tab):
       state.selectedDataTab = tab
 
     case .timer:
@@ -549,7 +549,7 @@ private let appReducer = Reducer.combine(
     case .timeline(.changedTimeline):
       fatalError()
 
-    case let .interruptionTapped(interruption):
+    case .interruptionTapped(let interruption):
       state.clarifiedInterruption = interruption
       state.route = nil
 
@@ -565,9 +565,9 @@ private let appReducer = Reducer.combine(
 
 private func appReducer(state: inout AppState, action: AppAction) -> Effect {
   switch action {
-  case let .ringsView(action, whilePortrait):
+  case .ringsView(let action, let whilePortrait):
     switch action {
-    case let .acentricRingsPinched(scaleFactor: scaleFactor):
+    case .acentricRingsPinched(scaleFactor: let scaleFactor):
       switch state.columnDisplayMode {
       case .singleColumn:
         if whilePortrait {
@@ -579,7 +579,7 @@ private func appReducer(state: inout AppState, action: AppAction) -> Effect {
         state.preferredRingsLayoutInDoubleColumnModeMode.scaleFactorWhenFullyAcentric = scaleFactor
       }
 
-    case let .concentricRingsPinched(scaleFactor: scaleFactor):
+    case .concentricRingsPinched(scaleFactor: let scaleFactor):
       switch state.columnDisplayMode {
       case .singleColumn:
         if whilePortrait {
@@ -598,7 +598,7 @@ private func appReducer(state: inout AppState, action: AppAction) -> Effect {
       case .target: state.prominentlyDisplayedRing = .period
       }
 
-    case let .ringConcentricityDragged(concentricity: concentricity):
+    case .ringConcentricityDragged(concentricity: let concentricity):
       switch state.columnDisplayMode {
       case .singleColumn:
         if whilePortrait {
@@ -660,7 +660,7 @@ private func appReducer(state: inout AppState, action: AppAction) -> Effect {
   case .ringsVieww:
     break
 
-  case let .settingsEditor(action):
+  case .settingsEditor(let action):
     settingsEditorReducer(state: &state.settings, action: action)
     state.route = .settingsModal
 
@@ -673,7 +673,7 @@ private func appReducer(state: inout AppState, action: AppAction) -> Effect {
   case .navigation(.settingsEditorDismissed):
     state.route = nil
 
-  case let .tabBarItemTapped(tab):
+  case .tabBarItemTapped(let tab):
     state.selectedDataTab = tab
 
   case .timer:
@@ -725,7 +725,7 @@ private func appReducer(state: inout AppState, action: AppAction) -> Effect {
   case .timeline(.changedTimeline):
     fatalError()
 
-  case let .interruptionTapped(interruption):
+  case .interruptionTapped(let interruption):
     state.clarifiedInterruption = interruption
     state.route = nil
 
@@ -1862,7 +1862,7 @@ var progressTimerCancellable: Set<AnyCancellable> = []
 extension AppAction {
   var uiAction: UIAction? {
     switch self {
-    case let .interruptionTapped(interruption):
+    case .interruptionTapped(let interruption):
       return interruption.uiAction
     default:
       return nil

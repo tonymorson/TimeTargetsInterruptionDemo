@@ -47,19 +47,19 @@ public func notificationSettingsEditorReducer(state: inout NotificationsSettings
                                               action: NotificationSettingsEditorAction)
 {
   switch action {
-  case let .showNotificationsToggled(value):
+  case .showNotificationsToggled(let value):
     state.showNotifications = value
-  case let .playSoundToggled(value):
+  case .playSoundToggled(let value):
     state.playSound = value
-  case let .onStartPeriodToggled(value):
+  case .onStartPeriodToggled(let value):
     state.onStartPeriod = value
-  case let .onStartBreakToggled(value):
+  case .onStartBreakToggled(let value):
     state.onStartBreak = value
-  case let .onLongPauseToggled(value):
+  case .onLongPauseToggled(let value):
     state.onLongPause = value
-  case let .onHalfwayToDailyToggled(value):
+  case .onHalfwayToDailyToggled(let value):
     state.onHalfwayToDailyTarget = value
-  case let .onReachingDailyTargetToggled(value):
+  case .onReachingDailyTargetToggled(let value):
     state.onReachingDailyTarget = value
   }
 }

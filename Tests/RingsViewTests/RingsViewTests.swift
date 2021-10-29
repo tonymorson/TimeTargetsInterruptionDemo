@@ -44,7 +44,7 @@ class RingsViewTests: XCTestCase {
       $0.layout.landscape.scaleFactorWhenFullyAcentric = 0.2
     }
   }
-  
+
   func testRingsDragged() {
     // TODO: Create a final dragged action and test clamping
 
@@ -58,16 +58,16 @@ class RingsViewTests: XCTestCase {
       $0.layout.landscape.concentricity = 0.4
     }
   }
-  
+
   func testRingsTapped() {
     let store = TestStore(initialState: RingsViewState(), reducer: ringsViewReducer, environment: .mock)
 
     store.send(.ringsViewTapped(.period)) {
-      $0.content.timeline.countdown.ticks = 0...334
+      $0.content.timeline.countdown.ticks = 0 ... 334
     }
-    
+
     store.send(.ringsViewTapped(.period)) {
-      $0.content.timeline.countdown.ticks = 0...0
+      $0.content.timeline.countdown.ticks = 0 ... 0
     }
   }
 }

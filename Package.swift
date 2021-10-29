@@ -113,7 +113,7 @@ let package = Package(
     .testTarget(
       name: "RingsViewTests",
       dependencies: [
-        "RingsView"
+        "RingsView",
       ]
     ),
     .target(

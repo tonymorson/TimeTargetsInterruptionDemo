@@ -74,7 +74,6 @@ internal final class RingView: UIView {
 }
 
 private final class RingLayer: CALayer {
-
   @NSManaged var color: CGColor
   @NSManaged var value: CGFloat
   @NSManaged var zIndex: CGFloat

@@ -17,9 +17,9 @@ struct AnnotatedRingsLayoutModel {
   {
     self.bounds = bounds
     self.focus = focus
-    self.isAlwaysVertical = isAlwaysPortrait
+    isAlwaysVertical = isAlwaysPortrait
     self.layout = layout
-    
+
     var captionBottomPadding: CGFloat
     var captionHeight: CGFloat
 
@@ -57,7 +57,7 @@ struct AnnotatedRingsLayoutModel {
         captionBottomPadding = 0
       }
     }
-    
+
     self.captionHeight = captionHeight
     self.captionBottomPadding = captionBottomPadding
   }
@@ -159,7 +159,7 @@ struct AnnotatedRingsLayoutModel {
                  center: position,
                  transform: transform)
   }
-  
+
   var period: AnnotatedRingLayout {
     .init(center: CGPoint(x: periodCenterX, y: periodCenterY),
           circumference: ringCircumference,
@@ -260,7 +260,7 @@ extension AnnotatedRingLayout {
 
     ringView.ring.bounds = bounds
     ringView.text.bounds = bounds
-    
+
     ringView.ring.center = CGPoint(x: bounds.midX, y: bounds.midY)
 
     let periodInset = CGFloat(bounds.width / 3.85)

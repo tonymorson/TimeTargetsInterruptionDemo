@@ -85,29 +85,29 @@ public func settingsEditorReducer(state: inout SettingsEditorState,
                                   action: SettingsEditorAction)
 {
   switch action {
-  case let .workDurationTapped(value):
+  case .workDurationTapped(let value):
     state.periods.workPeriodDuration = value
-  case let .shortBreakDurationTapped(value):
+  case .shortBreakDurationTapped(let value):
     state.periods.shortBreakDuration = value
-  case let .longBreakDurationTapped(value):
+  case .longBreakDurationTapped(let value):
     state.periods.longBreakDuration = value
-  case let .longBreaksFrequencyTapped(value):
+  case .longBreaksFrequencyTapped(let value):
     state.periods.longBreakFrequency = value
-  case let .dailyTargetTapped(value):
+  case .dailyTargetTapped(let value):
     state.periods.dailyTarget = value
-  case let .pauseBeforeWorkPeriodTapped(value):
+  case .pauseBeforeWorkPeriodTapped(let value):
     state.periods.pauseBeforeStartingWorkPeriods = value
-  case let .pauseBeforeBreakTapped(value):
+  case .pauseBeforeBreakTapped(let value):
     state.periods.pauseBeforeStartingBreaks = value
-  case let .resetWorkPeriodOnStopTapped(value):
+  case .resetWorkPeriodOnStopTapped(let value):
     state.periods.resetWorkPeriodOnStop = value
-  case let .themeTapped(value):
+  case .themeTapped(let value):
     state.appearance = value
-  case let .neverSleepTapped(value):
+  case .neverSleepTapped(let value):
     state.neverSleep = value
-  case let .notification(action):
+  case .notification(let action):
     notificationSettingsEditorReducer(state: &state.notifications, action: action)
-  case let .interruptionTimeoutTapped(timeout):
+  case .interruptionTimeoutTapped(let timeout):
     state.interruptionTimeout = timeout ?? -1
   }
 }
