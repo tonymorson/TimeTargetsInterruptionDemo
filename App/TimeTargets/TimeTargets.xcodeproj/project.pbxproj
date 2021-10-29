@@ -22,10 +22,10 @@
 		4198973326EE0996008CB625 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4198973226EE0996008CB625 /* SceneDelegate.swift */; };
 		4198974326EE0A61008CB625 /* NotificationSettingsEditor in Frameworks */ = {isa = PBXBuildFile; productRef = 4198974226EE0A61008CB625 /* NotificationSettingsEditor */; };
 		41B99F1C2711A51E0086F50A /* InterruptionPicker in Frameworks */ = {isa = PBXBuildFile; productRef = 41B99F1B2711A51E0086F50A /* InterruptionPicker */; };
-		41B9AA7A26EF315500CE6606 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B9AA7926EF315500CE6606 /* AppDelegate.swift */; };
-		41B9AA7C26EF315500CE6606 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B9AA7B26EF315500CE6606 /* SceneDelegate.swift */; };
-		41B9AA8626EF315900CE6606 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 41B9AA8426EF315900CE6606 /* LaunchScreen.storyboard */; };
+		41B9AA7A26EF315500CE6606 /* Boilerplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B9AA7926EF315500CE6606 /* Boilerplate.swift */; };
+		41B9AA7C26EF315500CE6606 /* RingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B9AA7B26EF315500CE6606 /* RingsViewController.swift */; };
 		41B9AA8C26EF324500CE6606 /* RingsView in Frameworks */ = {isa = PBXBuildFile; productRef = 41B9AA8B26EF324500CE6606 /* RingsView */; };
+		41D379442728E1FF00079E94 /* XcodePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D379422728E16600079E94 /* XcodePreview.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,10 +49,10 @@
 		4198973226EE0996008CB625 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		4198973E26EE099A008CB625 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		41B9AA7726EF315500CE6606 /* RingsViewPreview.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RingsViewPreview.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		41B9AA7926EF315500CE6606 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		41B9AA7B26EF315500CE6606 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		41B9AA8526EF315900CE6606 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		41B9AA7926EF315500CE6606 /* Boilerplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Boilerplate.swift; sourceTree = "<group>"; };
+		41B9AA7B26EF315500CE6606 /* RingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingsViewController.swift; sourceTree = "<group>"; };
 		41B9AA8726EF315900CE6606 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		41D379422728E16600079E94 /* XcodePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcodePreview.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -185,9 +185,9 @@
 		41B9AA7826EF315500CE6606 /* RingsViewPreview */ = {
 			isa = PBXGroup;
 			children = (
-				41B9AA7926EF315500CE6606 /* AppDelegate.swift */,
-				41B9AA7B26EF315500CE6606 /* SceneDelegate.swift */,
-				41B9AA8426EF315900CE6606 /* LaunchScreen.storyboard */,
+				41B9AA7926EF315500CE6606 /* Boilerplate.swift */,
+				41B9AA7B26EF315500CE6606 /* RingsViewController.swift */,
+				41D379422728E16600079E94 /* XcodePreview.swift */,
 				41B9AA8726EF315900CE6606 /* Info.plist */,
 			);
 			path = RingsViewPreview;
@@ -280,6 +280,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 41B9AA8A26EF315900CE6606 /* Build configuration list for PBXNativeTarget "RingsViewPreview" */;
 			buildPhases = (
+				415A386D2725D56B00E26B8C /* ShellScript */,
 				41B9AA7326EF315500CE6606 /* Sources */,
 				41B9AA7426EF315500CE6606 /* Frameworks */,
 				41B9AA7526EF315500CE6606 /* Resources */,
@@ -380,11 +381,30 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				41B9AA8626EF315900CE6606 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		415A386D2725D56B00E26B8C /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftformat >/dev/null; then\n  swiftformat --lint .\nelse\n  echo \"warning: SwiftFormat not installed, download from https://github.com/nicklockwood/SwiftFormat\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		416F64F326EE244C000DF69C /* Sources */ = {
@@ -427,8 +447,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				41B9AA7A26EF315500CE6606 /* AppDelegate.swift in Sources */,
-				41B9AA7C26EF315500CE6606 /* SceneDelegate.swift in Sources */,
+				41B9AA7A26EF315500CE6606 /* Boilerplate.swift in Sources */,
+				41D379442728E1FF00079E94 /* XcodePreview.swift in Sources */,
+				41B9AA7C26EF315500CE6606 /* RingsViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -447,14 +468,6 @@
 			isa = PBXVariantGroup;
 			children = (
 				418F9A1F26ECB39B0005624B /* Base */,
-			);
-			name = LaunchScreen.storyboard;
-			sourceTree = "<group>";
-		};
-		41B9AA8426EF315900CE6606 /* LaunchScreen.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				41B9AA8526EF315900CE6606 /* Base */,
 			);
 			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";

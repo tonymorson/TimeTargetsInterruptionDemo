@@ -1,37 +1,22 @@
 import Combine
+import ComposableArchitecture
 import InterruptionPicker
-import NotificationSettingsEditor
+import Notifications
 import RingsPopupMenu
 import RingsView
 import SettingsEditor
 import SwiftUIKit
+import Ticks
 import Timeline
 import TimelineReports
 import UIKit
-
-#warning("TODO:")
-// Notes
-// - Rework settings reducing as some actions are not being used eg. .timeline(.changedTimeline)
-// - Make navigation its own module?
-// - Audit popup menu items
-// - Make message center module?
-// - Move bottomMenuPopupProgressBar into message center module
-// - Move app toolbar into its own module...
-// - Move activity log view into its own module...
-// - Move ActivityLogHeading into its own module
-// - Move UIProgressView into message module?
-// - Move TimelineObservation enum into Timeline module?
-// - Fix case .running(.resumedBreakPeriod) wording
-// - Fix case .running(.resumedWorkPeriod) wording
-// - Revisit ResumeSoonProgressBarViewModel struct
-// - Revisit changedTimeline(Timeline) (timeline is somewhat redundent here)
-// - Bring back notifications!
+import UserNotifications
 
 private struct RingsLayoutPair: Equatable {
-  public var landscape: RingsViewLayout
-  public var portrait: RingsViewLayout
+  public var landscape: ConcentricityState
+  public var portrait: ConcentricityState
 
-  init(landscape: RingsViewLayout, portrait: RingsViewLayout) {
+  init(landscape: ConcentricityState, portrait: ConcentricityState) {
     self.landscape = landscape
     self.portrait = portrait
   }
@@ -63,7 +48,7 @@ private enum DisplayMode {
 
 enum NavigationPath: Equatable {
   case interruptionSheet(InterruptionPickerState, Date)
-  case settingsViewController(SettingsEditorState)
+  case settingsModal
 }
 
 public enum NavigationTabIdentifier: Codable {
@@ -74,10 +59,10 @@ private struct AppState: Equatable {
   var appearance: Appearance
   var neverSleep: Bool
   var columnDisplayMode: DisplayMode
-  var notificationSettings: NotificationSettingsEditorState
+  var notificationSettings: NotificationsSettingsState
   var route: NavigationPath?
   var preferredRingsLayoutInSingleColumnMode: RingsLayoutPair
-  var preferredRingsLayoutInDoubleColumnModeMode: RingsViewLayout
+  var preferredRingsLayoutInDoubleColumnModeMode: ConcentricityState
   var prominentlyDisplayedRing: RingIdentifier
   var selectedDataTab: NavigationTabIdentifier
   var userActivities: UserActivitesState
@@ -199,14 +184,29 @@ private struct AppState: Equatable {
     //    }
 
     switch (isCountingDown, isWorkTime, isAtStartOfPeriod) {
-    case (true, true, true): return [UIAction.pauseWorkPeriod, UIAction.skipToNextBreak]
-    case (true, true, false): return [UIAction.pauseWorkPeriod, UIAction.skipToNextBreak, UIAction.restartWorkPeriod]
-    case (true, false, true): return [UIAction.pauseBreak, UIAction.skipBreak]
-    case (true, false, false): return [UIAction.pauseBreak, UIAction.skipBreak, UIAction.restartBreak]
-    case (false, true, true): return [UIAction.startWorkPeriod, UIAction.skipToNextBreak]
-    case (false, true, false): return [logInterruptionMenu, UIAction.resumeWorkPeriod, UIAction.skipToNextBreak, UIAction.restartWorkPeriod]
-    case (false, false, true): return [UIAction.startBreak, UIAction.skipBreak]
-    case (false, false, false): return [logInterruptionMenu, UIAction.resumeBreak, UIAction.skipToNextWorkPeriod, UIAction.restartBreak]
+    case (true, true, true):
+      return [UIAction.pauseWorkPeriod, UIAction.skipToNextBreak]
+
+    case (true, true, false):
+      return [UIAction.pauseWorkPeriod, UIAction.skipToNextBreak, UIAction.restartWorkPeriod]
+
+    case (true, false, true):
+      return [UIAction.pauseBreak, UIAction.skipBreak]
+
+    case (true, false, false):
+      return [UIAction.pauseBreak, UIAction.skipBreak, UIAction.restartBreak]
+
+    case (false, true, true):
+      return [UIAction.startWorkPeriod, UIAction.skipToNextBreak]
+
+    case (false, true, false):
+      return [logInterruptionMenu, UIAction.resumeWorkPeriod, UIAction.skipToNextBreak, UIAction.restartWorkPeriod]
+
+    case (false, false, true):
+      return [UIAction.startBreak, UIAction.skipBreak]
+
+    case (false, false, false):
+      return [logInterruptionMenu, UIAction.resumeBreak, UIAction.skipToNextWorkPeriod, UIAction.restartBreak]
     }
   }
 
@@ -226,7 +226,7 @@ private struct AppState: Equatable {
     }
   }
 
-  var ringsData: RingsData {
+  var ringsData: Data {
     let isCountingDown = userActivities.isCountingDown
 
     let trackColor: UIColor = isCountingDown
@@ -297,6 +297,11 @@ private struct AppState: Equatable {
           layout: preferredRingsLayoutInDoubleColumnModeMode,
           prominentRing: prominentlyDisplayedRing)
   }
+
+  var ringsView: RingsViewState {
+    get { ringsViewDataModeRegular }
+    set {}
+  }
 }
 
 public enum NavigationAction: Equatable, Codable {
@@ -309,6 +314,7 @@ public enum AppAction: Equatable, Codable {
   case interruptionTapped(Interruption)
   case navigation(NavigationAction)
   case ringsView(RingsViewAction, whilePortrait: Bool)
+  case ringsVieww(RingsViewAction)
   case settingsEditor(SettingsEditorAction)
   case showDataButtonTapped
   case tabBarItemTapped(NavigationTabIdentifier)
@@ -316,69 +322,246 @@ public enum AppAction: Equatable, Codable {
   case timer(TimerAction)
 }
 
-@MainActor private let store = AppStore()
+// @MainActor private let store = AppStore()
 
-@MainActor
-private class AppStore {
-  @Published var state = AppState()
-  @Published var receiveAction: AppAction?
-
-  var ringsDisplayMode: AnyPublisher<DisplayMode, Never> {
-    $state
-      .map(\.columnDisplayMode)
-      .removeDuplicates()
-      .eraseToAnyPublisher()
-  }
-
-  var ringsFocus: AnyPublisher<RingIdentifier, Never> {
-    $state
-      .map(\.prominentlyDisplayedRing)
-      .removeDuplicates()
-      .eraseToAnyPublisher()
-  }
-
-  var settings: AnyPublisher<SettingsEditorState?, Never> {
-    $state
-      .map { state -> SettingsEditorState? in
-        if case let .settingsViewController(editorState) = state.route {
-          return editorState
-        }
-
-        return nil
-      }
-      .removeDuplicates()
-      .eraseToAnyPublisher()
-  }
-
-  private var cancellables: Set<AnyCancellable> = []
-
-  init() {
-    $receiveAction
-      .compactMap { $0 }
-      .sink {
-        let effect = appReducer(state: &self.state, action: $0)
-
-        switch effect.f {
-        case let .fireAndForget(f):
-          Task {
-            await f()
-          }
-
-        case let .action(f):
-          Task {
-            store.receiveAction = await f()
-          }
-        }
-      }
-      .store(in: &cancellables)
-  }
-}
+// @MainActor
+// private class AppStore {
+//  @Published var state = AppState()
+//  @Published var receiveAction: AppAction?
+//
+//  var ringsDisplayMode: AnyPublisher<DisplayMode, Never> {
+//    $state
+//      .map(\.columnDisplayMode)
+//      .removeDuplicates()
+//      .eraseToAnyPublisher()
+//  }
+//
+//  var ringsFocus: AnyPublisher<RingIdentifier, Never> {
+//    $state
+//      .map(\.prominentlyDisplayedRing)
+//      .removeDuplicates()
+//      .eraseToAnyPublisher()
+//  }
+//
+////  var settings: AnyPublisher<SettingsEditorState?, Never> {
+////    $state
+////      .map { state -> SettingsEditorState? in
+////        if case let .settingsViewController(editorState) = state.route {
+////          return editorState
+////        }
+////
+////        return nil
+////      }
+////      .removeDuplicates()
+////      .eraseToAnyPublisher()
+////  }
+//
+//  private var cancellables: Set<AnyCancellable> = []
+//
+//  init() {
+//    $receiveAction
+//      .compactMap { $0 }
+//      .sink {
+//        let effect = appReducer(state: &self.state, action: $0)
+//
+//        switch effect.f {
+//        case let .fireAndForget(f):
+//          Task {
+//            await f()
+//          }
+//
+//        case let .action(f):
+//          Task {
+//            store.receiveAction = await f()
+//          }
+//        }
+//      }
+//      .store(in: &cancellables)
+//  }
+// }
 
 public enum TimerAction: Codable {
   case ticked
 }
 
 var cancellables: Set<AnyCancellable> = []
+
+private let appReducer = Reducer.combine(
+  Reducer<AppState, AppAction, Void> { state, action, _ in
+    switch action {
+    case let .ringsView(action, whilePortrait):
+      switch action {
+      case let .acentricRingsPinched(scaleFactor: scaleFactor):
+        switch state.columnDisplayMode {
+        case .singleColumn:
+          if whilePortrait {
+            state.preferredRingsLayoutInSingleColumnMode.portrait.scaleFactorWhenFullyAcentric = scaleFactor
+          } else {
+            state.preferredRingsLayoutInSingleColumnMode.landscape.scaleFactorWhenFullyAcentric = scaleFactor
+          }
+        case .doubleColumn:
+          state.preferredRingsLayoutInDoubleColumnModeMode.scaleFactorWhenFullyAcentric = scaleFactor
+        }
+
+      case let .concentricRingsPinched(scaleFactor: scaleFactor):
+        switch state.columnDisplayMode {
+        case .singleColumn:
+          if whilePortrait {
+            state.preferredRingsLayoutInSingleColumnMode.portrait.scaleFactorWhenFullyConcentric = scaleFactor
+          } else {
+            state.preferredRingsLayoutInSingleColumnMode.landscape.scaleFactorWhenFullyConcentric = scaleFactor
+          }
+        case .doubleColumn:
+          state.preferredRingsLayoutInDoubleColumnModeMode.scaleFactorWhenFullyConcentric = scaleFactor
+        }
+
+      case .concentricRingsTappedInColoredBandsArea:
+        switch state.prominentlyDisplayedRing {
+        case .period: state.prominentlyDisplayedRing = .session
+        case .session: state.prominentlyDisplayedRing = .target
+        case .target: state.prominentlyDisplayedRing = .period
+        }
+
+      case let .ringConcentricityDragged(concentricity: concentricity):
+        switch state.columnDisplayMode {
+        case .singleColumn:
+          if whilePortrait {
+            state.preferredRingsLayoutInSingleColumnMode.portrait.concentricity = concentricity
+          } else {
+            state.preferredRingsLayoutInSingleColumnMode.landscape.concentricity = concentricity
+          }
+        case .doubleColumn:
+          state.preferredRingsLayoutInDoubleColumnModeMode.concentricity = concentricity
+        }
+
+      case .ringsViewTapped(.some):
+
+        cancellablePropertyAnimator?.stopAnimation(true)
+
+        var isCountingDown = state.userActivities.isCountingDown
+
+        userActivitesReducer(state: &state.userActivities, action: isCountingDown ? .pause : .resume)
+
+        isCountingDown = state.userActivities.isCountingDown
+        let isPaused = !isCountingDown
+        state.clarifiedInterruption = nil
+
+        if isPaused, state.pausedToInterruptionTimeout >= 0 {
+          let scopeIdentifier = 0
+          let title = "Significant interruption at \(state.interruptionTime.formatted(date: .omitted, time: .shortened))"
+          let subtitle = "Provide reason for interruption?"
+          state.route = .interruptionSheet(.init(scopeIdentifier: scopeIdentifier,
+                                                 title: title,
+                                                 subtitle: subtitle), Date().addingTimeInterval(state.pausedToInterruptionTimeout))
+        } else {
+          state.route = nil
+        }
+
+        let stateCpy = state
+
+//      return .fireAndForget {
+//        cancellables.removeAll()
+//
+//        if stateCpy.userActivities.isCountingDown {
+//          Timer.publish(every: 1, on: .main, in: .default)
+//            .autoconnect()
+//            .map { _ in AppAction.timer(.ticked) }
+//            .assign(to: \.receiveAction, on: store)
+//            .store(in: &cancellables)
+//        } else {
+//          Timer.publish(every: 1, on: .main, in: .default)
+//            .autoconnect()
+//            .map { _ in AppAction.timer(.ticked) }
+//            .assign(to: \.receiveAction, on: store)
+//            .store(in: &cancellables)
+//        }
+//      }
+
+      case .ringsViewTapped(.none):
+        break
+      }
+
+    case .ringsVieww:
+      break
+
+    case let .settingsEditor(action):
+      settingsEditorReducer(state: &state.settings, action: action)
+      state.route = .settingsModal
+
+    case .showDataButtonTapped:
+      state.columnDisplayMode.toggle()
+
+    case .navigation(.settingsEditorSummoned):
+      state.route = .settingsModal
+
+    case .navigation(.settingsEditorDismissed):
+      state.route = nil
+
+    case let .tabBarItemTapped(tab):
+      state.selectedDataTab = tab
+
+    case .timer:
+      state.userActivities.currentTick = state.timeline.countdown.tick(at: Date())
+
+    case .timeline(.pause):
+      userActivitesReducer(state: &state.userActivities, action: .pause)
+
+      return .fireAndForget {
+        cancellables.removeAll()
+      }
+
+    case .timeline(.restartCurrentPeriod):
+      userActivitesReducer(state: &state.userActivities, action: .restartCurrentPeriod)
+
+    case .timeline(.resetTimelineToTickZero):
+      userActivitesReducer(state: &state.userActivities, action: .resetTimelineToTickZero)
+
+      return .fireAndForget {
+        cancellables.removeAll()
+      }
+
+    case .timeline(.resume):
+      userActivitesReducer(state: &state.userActivities, action: .resume)
+
+//    return .fireAndForget {
+//      cancellables.removeAll()
+//
+//      Timer.publish(every: 1, on: .main, in: .default)
+//        .autoconnect()
+//        .map { _ in AppAction.timer(.ticked) }
+//        .assign(to: \.receiveAction, on: store)
+//        .store(in: &cancellables)
+//    }
+
+    case .timeline(.skipCurrentPeriod):
+      userActivitesReducer(state: &state.userActivities, action: .skipCurrentPeriod)
+
+//    return .fireAndForget {
+//      cancellables.removeAll()
+//
+//      Timer.publish(every: 1, on: .main, in: .default)
+//        .autoconnect()
+//        .map { _ in AppAction.timer(.ticked) }
+//        .assign(to: \.receiveAction, on: store)
+//        .store(in: &cancellables)
+//    }
+
+    case .timeline(.changedTimeline):
+      fatalError()
+
+    case let .interruptionTapped(interruption):
+      state.clarifiedInterruption = interruption
+      state.route = nil
+
+    case .navigation(.interruptionPickerDismissed):
+      state.route = nil
+    }
+
+    return .none
+  },
+
+  ringsViewReducer.pullback(state: \.ringsView, action: /AppAction.ringsVieww, environment: {})
+)
 
 private func appReducer(state: inout AppState, action: AppAction) -> Effect {
   switch action {
@@ -452,37 +635,40 @@ private func appReducer(state: inout AppState, action: AppAction) -> Effect {
 
       let stateCpy = state
 
-      return .fireAndForget {
-        cancellables.removeAll()
-
-        if stateCpy.userActivities.isCountingDown {
-          Timer.publish(every: 1, on: .main, in: .default)
-            .autoconnect()
-            .map { _ in AppAction.timer(.ticked) }
-            .assign(to: \.receiveAction, on: store)
-            .store(in: &cancellables)
-        } else {
-          Timer.publish(every: 1, on: .main, in: .default)
-            .autoconnect()
-            .map { _ in AppAction.timer(.ticked) }
-            .assign(to: \.receiveAction, on: store)
-            .store(in: &cancellables)
-        }
-      }
+//      return .fireAndForget {
+//        cancellables.removeAll()
+//
+//        if stateCpy.userActivities.isCountingDown {
+//          Timer.publish(every: 1, on: .main, in: .default)
+//            .autoconnect()
+//            .map { _ in AppAction.timer(.ticked) }
+//            .assign(to: \.receiveAction, on: store)
+//            .store(in: &cancellables)
+//        } else {
+//          Timer.publish(every: 1, on: .main, in: .default)
+//            .autoconnect()
+//            .map { _ in AppAction.timer(.ticked) }
+//            .assign(to: \.receiveAction, on: store)
+//            .store(in: &cancellables)
+//        }
+//      }
 
     case .ringsViewTapped(.none):
       break
     }
 
+  case .ringsVieww:
+    break
+
   case let .settingsEditor(action):
     settingsEditorReducer(state: &state.settings, action: action)
-    state.route = .settingsViewController(state.settings)
+    state.route = .settingsModal
 
   case .showDataButtonTapped:
     state.columnDisplayMode.toggle()
 
   case .navigation(.settingsEditorSummoned):
-    state.route = .settingsViewController(state.settings)
+    state.route = .settingsModal
 
   case .navigation(.settingsEditorDismissed):
     state.route = nil
@@ -513,28 +699,28 @@ private func appReducer(state: inout AppState, action: AppAction) -> Effect {
   case .timeline(.resume):
     userActivitesReducer(state: &state.userActivities, action: .resume)
 
-    return .fireAndForget {
-      cancellables.removeAll()
-
-      Timer.publish(every: 1, on: .main, in: .default)
-        .autoconnect()
-        .map { _ in AppAction.timer(.ticked) }
-        .assign(to: \.receiveAction, on: store)
-        .store(in: &cancellables)
-    }
+//    return .fireAndForget {
+//      cancellables.removeAll()
+//
+//      Timer.publish(every: 1, on: .main, in: .default)
+//        .autoconnect()
+//        .map { _ in AppAction.timer(.ticked) }
+//        .assign(to: \.receiveAction, on: store)
+//        .store(in: &cancellables)
+//    }
 
   case .timeline(.skipCurrentPeriod):
     userActivitesReducer(state: &state.userActivities, action: .skipCurrentPeriod)
 
-    return .fireAndForget {
-      cancellables.removeAll()
-
-      Timer.publish(every: 1, on: .main, in: .default)
-        .autoconnect()
-        .map { _ in AppAction.timer(.ticked) }
-        .assign(to: \.receiveAction, on: store)
-        .store(in: &cancellables)
-    }
+//    return .fireAndForget {
+//      cancellables.removeAll()
+//
+//      Timer.publish(every: 1, on: .main, in: .default)
+//        .autoconnect()
+//        .map { _ in AppAction.timer(.ticked) }
+//        .assign(to: \.receiveAction, on: store)
+//        .store(in: &cancellables)
+//    }
 
   case .timeline(.changedTimeline):
     fatalError()
@@ -554,6 +740,9 @@ var cancellablePropertyAnimator: UIViewPropertyAnimator?
 
 @MainActor
 public class AppViewController: UIViewController {
+  fileprivate let sstore = Store<AppState, AppAction>(initialState: .init(), reducer: appReducer, environment: ())
+  fileprivate var viewStore: ViewStore<AppState, AppAction>!
+
   var cancellables: Set<AnyCancellable> = []
 
   override public init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
@@ -567,6 +756,8 @@ public class AppViewController: UIViewController {
 
   override public func viewDidLoad() {
     super.viewDidLoad()
+
+    viewStore = ViewStore(sstore)
 
     overrideUserInterfaceStyle = .dark
     view.backgroundColor = .systemBackground
@@ -591,308 +782,394 @@ public class AppViewController: UIViewController {
 
     // Configure rings view
 
-    view.host(ringsView)
+    view.host(ringsView) { v, p in
+      v.topAnchor.constraint(equalTo: topAppToolbar.bottomAnchor)
+      v.bottomAnchor.constraint(equalTo: p.safeAreaLayoutGuide.bottomAnchor)
+      v.leadingAnchor.constraint(equalTo: p.safeAreaLayoutGuide.leadingAnchor)
+      v.trailingAnchor.constraint(equalTo: p.safeAreaLayoutGuide.trailingAnchor)
+    }
 
     // Configure settings editor
 
-    store.settings
-      .filter { $0 != nil }
-      .sink { _ in
-        if self.presentedViewController == nil {
-          let filteredSettings = store.settings.filter { $0 != nil }
-            .map { $0! }
-            .eraseToAnyPublisher()
-
-          let editor = SettingsEditor(state: filteredSettings)
-          editor.onDismiss = { store.receiveAction = .navigation(.settingsEditorDismissed) }
-
-          self.present(editor, animated: true)
-
-          (editor.viewControllers.first)?
-            .navigationBarItems(leading: { BarButtonItem(.cancel) { store.receiveAction = .navigation(.settingsEditorDismissed) } })
-            .navigationBarItems(trailing: { BarButtonItem(.done) { store.receiveAction = .navigation(.settingsEditorDismissed) } })
-
-          editor.sentActions
-            .map(AppAction.settingsEditor)
-            .assign(to: &store.$receiveAction)
-        }
-      }
-      .store(in: &cancellables)
-
-    store.settings
-      .filter { $0 == nil }
-      .sink { _ in
-        if self.presentedViewController is SettingsEditor {
-          self.dismiss(animated: true)
-        }
-      }
-      .store(in: &cancellables)
-
-    // Configure segmented control
-
-    store.$state
-      .map(\.columnDisplayMode)
-      .map { $0 == .doubleColumn &&
-        !(self.view.isPortrait &&
-          self.traitCollection.horizontalSizeClass == .compact &&
-          self.traitCollection.verticalSizeClass == .regular)
-      }
-      .removeDuplicates()
-      .sink { shouldShow in
-        self.topAppToolbar.isShowingExtraButton(isShowing: shouldShow)
-      }
-      .store(in: &cancellables)
-
-    view.host(activityLogHeading)
-    view.host(activityLog)
-
-    //    store.$state
-    //      .map(\.standardMessage)
-    //      .removeDuplicates()
-    //      .sink { value in
-    //        // https://stackoverflow.com/questions/3073520/animate-text-change-in-uilabel
-    //        let animation = CATransition()
-    //
-    //        let interval: CFTimeInterval = value.message.isEmpty
-    //        ? 1.0
-    //        : 0.15
-    //
-    //        animation.duration = interval
-    //        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-    //        self.bottomMenuPopup.layer.add(animation, forKey: nil)
-    //        self.bottomMenuPopup.title = value.message.isEmpty
-    //        ? (" ", UIColor.systemRed)
-    //        : (value.message, UIColor.systemRed)
-    //
-    //        self.bottomMenuPopup.subtitle = value.subMessage.isEmpty
-    //        ? (" ", UIColor.systemRed)
-    //        : (value.subMessage, UIColor.label)
-    //      }
-    //      .store(in: &cancellables)
-
-    //    Publishers.Zip(store.$state.map(\.popupMenuTitle), store.$state.map(\.popupMenuTitleColor))
-    //      .removeDuplicates { $0.0 == $1.0 }
-    //      .sink { value in
-    //        // https://stackoverflow.com/questions/3073520/animate-text-change-in-uilabel
-    //        let animation = CATransition()
-    //
-    //        let interval: CFTimeInterval = value.0.isEmpty
-    //        ? 1.0
-    //        : 0.15
-    //
-    //        animation.duration = interval
-    //        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-    //        self.bottomMenuPopup.layer.add(animation, forKey: nil)
-    //        self.bottomMenuPopup.title = value.0.isEmpty ? (" ", value.1) : value
-    //      }
-    //      .store(in: &cancellables)
-
-    //    Publishers.Zip(store.$state.map(\.popupMenuSubtitle), store.$state.map { _ in .label })
-    //      .removeDuplicates { $0.0 == $1.0 }
-    //      .map { $0.0.isEmpty ? (" ", $0.1) : $0 }
-    //      .assign(to: \.subtitle, on: bottomMenuPopup)
-    //      .store(in: &cancellables)
-
-    //    Publishers.Zip(store.$state.map(\.popupMenuSubtitle), store.$state.map { _ in UIColor.label })
-    //      .removeDuplicates { $0.0 == $1.0 }
-    //      .map { $0.0.isEmpty ? (" ", $0.1) : $0 }
-    //      .sink { value in
-    //      // https://stackoverflow.com/questions/3073520/animate-text-change-in-uilabel
-    //      let animation = CATransition()
-    //
-    //      let interval: CFTimeInterval = value.0.isEmpty
-    //      ? 1.0
-    //      : 0.15
-    //
-    //      animation.duration = interval
-    //      animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-    //      self.bottomMenuPopup.layer.add(animation, forKey: nil)
-    //        self.bottomMenuPopup.subtitle = self.bottomMenuPopup.subtitle.0.isEmpty ? (" ", value.1) : value
-    //    }      .store(in: &cancellables)
-
-    store.$state.map(\.popupMenuItems)
-      .removeDuplicates { $0.map(\.title) == $1.map(\.title) }
-      .map { $0.reversed() }
-      .assign(to: \.menuItems, on: bottomMenuPopup)
-      .store(in: &cancellables)
-
-    store.$state
-      .map(\.columnDisplayMode)
-      .map { $0 == .doubleColumn && !(self.view.isPortrait && self.traitCollection.horizontalSizeClass == .compact && self.traitCollection.verticalSizeClass == .regular) }
-      .removeDuplicates()
-      .sink { shouldShow in
-        self.topAppToolbar.isShowingExtraButton(isShowing: shouldShow)
-      }
-      .store(in: &cancellables)
-
-    store.$state
-      .map { state -> CGFloat in
-
-//        self.view.backgroundColor = state.report.currentPeriod.isWorkPeriod
-//          ? .systemRed.lighter!.lighter!
-//        : .systemOrange.lighter!.lighter!.slightyLighter!
+    ////    store.settings
+    ////      .filter { $0 != nil }
+    ////      .sink { _ in
+    ////        if self.presentedViewController == nil {
+    ////          let filteredSettings = store.settings.filter { $0 != nil }
+    ////            .map { $0! }
+    ////            .eraseToAnyPublisher()
+    ////
+    ////          let editor = SettingsEditor(state: filteredSettings)
+    ////          editor.onDismiss = { store.receiveAction = .navigation(.settingsEditorDismissed) }
+    ////
+    ////          self.present(editor, animated: true)
+    ////
+    ////          (editor.viewControllers.first)?
+    ////            .navigationBarItems(leading: { BarButtonItem(.cancel) { store.receiveAction = .navigation(.settingsEditorDismissed) } })
+    ////            .navigationBarItems(trailing: { BarButtonItem(.done) { store.receiveAction = .navigation(.settingsEditorDismissed) } })
+    ////
+    ////          editor.sentActions
+    ////            .map(AppAction.settingsEditor)
+    ////            .assign(to: &store.$receiveAction)
+    ////        }
+    ////      }
+    ////      .store(in: &cancellables)
 //
-//        if state.userActivities.isCountingDown == false {
-//          self.view.backgroundColor = .systemBackground
+//    store.$state
+//      .map(\.route)
+//      .removeDuplicates()
+//      .sink { route in
+//
+    ////        if self.presentedViewController is SettingsEditor {
+    ////          self.dismiss(animated: true)
+    ////        }
+//
+//      switch route {
+//
+//      case .none:
+//        if self.presentedViewController is SettingsEditor {
+//                  self.dismiss(animated: true)
+//                }
+//
+//      case .some(.settingsModal):
+//                if self.presentedViewController == nil {
+//                  let filteredSettings = store.$state.map(\.settings)
+//                    .eraseToAnyPublisher()
+//
+//                  let editor = SettingsEditor(state: filteredSettings)
+    ////                  editor.onDismiss = { store.receiveAction = .navigation(.settingsEditorDismissed) }
+//                  editor.onDismiss = { self.viewStore.send(.navigation(.settingsEditorDismissed)) }
+//
+//                  self.present(editor, animated: true)
+//
+//                  (editor.viewControllers.first)?
+//                    .navigationBarItems(leading: { BarButtonItem(.cancel) { store.receiveAction = .navigation(.settingsEditorDismissed) } })
+//                    .navigationBarItems(trailing: { BarButtonItem(.done) { store.receiveAction = .navigation(.settingsEditorDismissed) } })
+//
+//                  editor.sentActions
+//                    .map(AppAction.settingsEditor)
+//                    .assign(to: &store.$receiveAction)
+//                }
+//
+//      case .some(.interruptionSheet(let state, let date)):
+//        if self.presentedViewController is SettingsEditor {
+//                  self.dismiss(animated: true)
+//                }
+//      }
+//    }
+//      .store(in: &cancellables)
+//
+    ////    store.settings
+    ////      .filter { $0 == nil }
+    ////      .sink { _ in
+    ////        if self.presentedViewController is SettingsEditor {
+    ////          self.dismiss(animated: true)
+    ////        }
+    ////      }
+    ////      .store(in: &cancellables)
+//
+//    // Configure segmented control
+//
+//    store.$state
+//      .map(\.columnDisplayMode)
+//      .map { $0 == .doubleColumn &&
+//        !(self.view.isPortrait &&
+//          self.traitCollection.horizontalSizeClass == .compact &&
+//          self.traitCollection.verticalSizeClass == .regular)
+//      }
+//      .removeDuplicates()
+//      .sink { shouldShow in
+//        self.topAppToolbar.isShowingExtraButton(isShowing: shouldShow)
+//      }
+//      .store(in: &cancellables)
+//
+//    view.host(activityLogHeading)
+//    view.host(activityLog)
+//
+//    //    store.$state
+//    //      .map(\.standardMessage)
+//    //      .removeDuplicates()
+//    //      .sink { value in
+//    //        // https://stackoverflow.com/questions/3073520/animate-text-change-in-uilabel
+//    //        let animation = CATransition()
+//    //
+//    //        let interval: CFTimeInterval = value.message.isEmpty
+//    //        ? 1.0
+//    //        : 0.15
+//    //
+//    //        animation.duration = interval
+//    //        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+//    //        self.bottomMenuPopup.layer.add(animation, forKey: nil)
+//    //        self.bottomMenuPopup.title = value.message.isEmpty
+//    //        ? (" ", UIColor.systemRed)
+//    //        : (value.message, UIColor.systemRed)
+//    //
+//    //        self.bottomMenuPopup.subtitle = value.subMessage.isEmpty
+//    //        ? (" ", UIColor.systemRed)
+//    //        : (value.subMessage, UIColor.label)
+//    //      }
+//    //      .store(in: &cancellables)
+//
+//    //    Publishers.Zip(store.$state.map(\.popupMenuTitle), store.$state.map(\.popupMenuTitleColor))
+//    //      .removeDuplicates { $0.0 == $1.0 }
+//    //      .sink { value in
+//    //        // https://stackoverflow.com/questions/3073520/animate-text-change-in-uilabel
+//    //        let animation = CATransition()
+//    //
+//    //        let interval: CFTimeInterval = value.0.isEmpty
+//    //        ? 1.0
+//    //        : 0.15
+//    //
+//    //        animation.duration = interval
+//    //        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+//    //        self.bottomMenuPopup.layer.add(animation, forKey: nil)
+//    //        self.bottomMenuPopup.title = value.0.isEmpty ? (" ", value.1) : value
+//    //      }
+//    //      .store(in: &cancellables)
+//
+//    //    Publishers.Zip(store.$state.map(\.popupMenuSubtitle), store.$state.map { _ in .label })
+//    //      .removeDuplicates { $0.0 == $1.0 }
+//    //      .map { $0.0.isEmpty ? (" ", $0.1) : $0 }
+//    //      .assign(to: \.subtitle, on: bottomMenuPopup)
+//    //      .store(in: &cancellables)
+//
+//    //    Publishers.Zip(store.$state.map(\.popupMenuSubtitle), store.$state.map { _ in UIColor.label })
+//    //      .removeDuplicates { $0.0 == $1.0 }
+//    //      .map { $0.0.isEmpty ? (" ", $0.1) : $0 }
+//    //      .sink { value in
+//    //      // https://stackoverflow.com/questions/3073520/animate-text-change-in-uilabel
+//    //      let animation = CATransition()
+//    //
+//    //      let interval: CFTimeInterval = value.0.isEmpty
+//    //      ? 1.0
+//    //      : 0.15
+//    //
+//    //      animation.duration = interval
+//    //      animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+//    //      self.bottomMenuPopup.layer.add(animation, forKey: nil)
+//    //        self.bottomMenuPopup.subtitle = self.bottomMenuPopup.subtitle.0.isEmpty ? (" ", value.1) : value
+//    //    }      .store(in: &cancellables)
+//
+//    store.$state.map(\.popupMenuItems)
+//      .removeDuplicates { $0.map(\.title) == $1.map(\.title) }
+//      .map { $0.reversed() }
+//      .assign(to: \.menuItems, on: bottomMenuPopup)
+//      .store(in: &cancellables)
+//
+//    store.$state
+//      .map(\.columnDisplayMode)
+//      .map { $0 == .doubleColumn && !(self.view.isPortrait && self.traitCollection.horizontalSizeClass == .compact && self.traitCollection.verticalSizeClass == .regular) }
+//      .removeDuplicates()
+//      .sink { shouldShow in
+//        self.topAppToolbar.isShowingExtraButton(isShowing: shouldShow)
+//      }
+//      .store(in: &cancellables)
+//
+//    store.$state
+//      .map { state -> CGFloat in
+//
+    ////        self.view.backgroundColor = state.report.currentPeriod.isWorkPeriod
+    ////          ? .systemRed.lighter!.lighter!
+    ////        : .systemOrange.lighter!.lighter!.slightyLighter!
+    ////
+    ////        if state.userActivities.isCountingDown == false {
+    ////          self.view.backgroundColor = .systemBackground
+    ////        }
+    ////
+//        (state.columnDisplayMode == .doubleColumn) && self.view.isPortrait && self.traitCollection.horizontalSizeClass == .compact ? 1.0 : 0.0
+//      }
+//      .removeDuplicates()
+//      .assign(to: \.alpha, on: tabBar)
+//      .store(in: &cancellables)
+//
+//    store.$state
+//      .removeDuplicates()
+//      .sink { [weak self] in
+//        guard let self = self else { return }
+//        let isShowingData = $0.columnDisplayMode == .doubleColumn
+//
+//        self.noShowDataLayoutMode = self.traitCollection.horizontalSizeClass == .compact
+//          ? self.singleColumnRingsOnly
+//          : self.singleColumnRingsOnly
+//
+//        let x = $0.selectedDataTab == .today ? self.doubleColumnRingsLeft : self.doubleColumnRingsRight
+//        self.showDataLayoutMode = self.traitCollection.horizontalSizeClass == .compact
+//          ? self.view.isPortrait ? self.compactWidthLayout2 : x
+//          : x
+//
+//        NSLayoutConstraint.deactivate(self.singleColumnRingsOnly)
+//        NSLayoutConstraint.deactivate(self.compactWidthLayout)
+//        NSLayoutConstraint.deactivate(self.compactWidthLayout2)
+//        NSLayoutConstraint.deactivate(self.normalWidthLayout)
+//        NSLayoutConstraint.deactivate(self.doubleColumnRingsLeft)
+//        NSLayoutConstraint.deactivate(self.doubleColumnRingsRight)
+//
+//        if isShowingData {
+//          NSLayoutConstraint.activate(self.showDataLayoutMode)
+//        } else {
+//          NSLayoutConstraint.activate(self.singleColumnRingsOnly)
+//        }
+//      }
+//      .store(in: &cancellables)
+//
+//    store.menuPopupViewModel
+//      .removeDuplicates()
+//      .assign(to: \.viewModel, on: bottomMenuPopup)
+//      .store(in: &cancellables)
+//
+//    store.resumeSoonProgressBarViewModel
+//      .removeDuplicates()
+//      .sink { [weak self] viewModel in
+//        if viewModel != nil {
+//          guard let strongSelf = self else { return }
+//          let cancellableProgressBar = UIProgressView()
+//          cancellableProgressBar.tag = 1_923_338
+//          strongSelf.bottomMenuPopupProgressBar = cancellableProgressBar
+//          cancellableProgressBar.isHidden = store.state.pausedToInterruptionTimeout < 0
+//          cancellableProgressBar.progress = 0.01
+//
+//          if store.state.pausedToInterruptionTimeout >= 0 {
+//            cancellableProgressBar.progress = 0.01
+//            cancellableProgressBar.alpha = 0.75
+//
+//            cancellablePropertyAnimator = cancellableProgressBar.animator(duration: store.state.pausedToInterruptionTimeout) { _ in }
+//
+//            cancellablePropertyAnimator?.startAnimation()
+//          }
+//        } else {
+//          self?.view.viewWithTag(1_923_338)?.removeFromSuperview()
+//          cancellablePropertyAnimator?.stopAnimation(true)
+//          cancellablePropertyAnimator = nil
+//        }
+//      }
+//      .store(in: &cancellables)
+//
+//    // Triggered when global state changes its InterruptionPickerState.
+//    store.$state
+//      .map(\.route)
+//      .map { route -> InterruptionPickerState? in
+//        switch route {
+//        case let .interruptionSheet(state, date):
+//          if Date() > date {
+//            return Optional(state)
+//          } else {
+//            return nil
+//          }
+//        default:
+//          return nil
+//        }
+//      }
+//      .removeDuplicates()
+//      .sink { interruptionPickerState in
+//
+//        // If something is already being presented, tear it down.
+//        // We may need to do this if a context menu is currently
+//        // being shown for example.
+//        if self.presentedViewController != nil {
+//          self.dismiss(animated: true)
 //        }
 //
-        (state.columnDisplayMode == .doubleColumn) && self.view.isPortrait && self.traitCollection.horizontalSizeClass == .compact ? 1.0 : 0.0
-      }
-      .removeDuplicates()
-      .assign(to: \.alpha, on: tabBar)
-      .store(in: &cancellables)
-
-    store.$state
-      .removeDuplicates()
-      .sink { [weak self] in
-        guard let self = self else { return }
-        let isShowingData = $0.columnDisplayMode == .doubleColumn
-
-        self.noShowDataLayoutMode = self.traitCollection.horizontalSizeClass == .compact
-          ? self.singleColumnRingsOnly
-          : self.singleColumnRingsOnly
-
-        let x = $0.selectedDataTab == .today ? self.doubleColumnRingsLeft : self.doubleColumnRingsRight
-        self.showDataLayoutMode = self.traitCollection.horizontalSizeClass == .compact
-          ? self.view.isPortrait ? self.compactWidthLayout2 : x
-          : x
-
-        NSLayoutConstraint.deactivate(self.singleColumnRingsOnly)
-        NSLayoutConstraint.deactivate(self.compactWidthLayout)
-        NSLayoutConstraint.deactivate(self.compactWidthLayout2)
-        NSLayoutConstraint.deactivate(self.normalWidthLayout)
-        NSLayoutConstraint.deactivate(self.doubleColumnRingsLeft)
-        NSLayoutConstraint.deactivate(self.doubleColumnRingsRight)
-
-        if isShowingData {
-          NSLayoutConstraint.activate(self.showDataLayoutMode)
-        } else {
-          NSLayoutConstraint.activate(self.singleColumnRingsOnly)
-        }
-      }
-      .store(in: &cancellables)
-
-    store.menuPopupViewModel
-      .removeDuplicates()
-      .assign(to: \.viewModel, on: bottomMenuPopup)
-      .store(in: &cancellables)
-
-    store.resumeSoonProgressBarViewModel
-      .removeDuplicates()
-      .sink { [weak self] viewModel in
-        if viewModel != nil {
-          guard let strongSelf = self else { return }
-          let cancellableProgressBar = UIProgressView()
-          cancellableProgressBar.tag = 1_923_338
-          strongSelf.bottomMenuPopupProgressBar = cancellableProgressBar
-          cancellableProgressBar.isHidden = store.state.pausedToInterruptionTimeout < 0
-          cancellableProgressBar.progress = 0.01
-
-          if store.state.pausedToInterruptionTimeout >= 0 {
-            cancellableProgressBar.progress = 0.01
-            cancellableProgressBar.alpha = 0.75
-
-            cancellablePropertyAnimator = cancellableProgressBar.animator(duration: store.state.pausedToInterruptionTimeout) { _ in }
-
-            cancellablePropertyAnimator?.startAnimation()
-          }
-        } else {
-          self?.view.viewWithTag(1_923_338)?.removeFromSuperview()
-          cancellablePropertyAnimator?.stopAnimation(true)
-          cancellablePropertyAnimator = nil
-        }
-      }
-      .store(in: &cancellables)
-
-    // Triggered when global state changes its InterruptionPickerState.
-    store.$state
-      .map(\.route)
-      .map { route -> InterruptionPickerState? in
-        switch route {
-        case let .interruptionSheet(state, date):
-          if Date() > date {
-            return Optional(state)
-          } else {
-            return nil
-          }
-        default:
-          return nil
-        }
-      }
-      .removeDuplicates()
-      .sink { interruptionPickerState in
-
-        // If something is already being presented, tear it down.
-        // We may need to do this if a context menu is currently
-        // being shown for example.
-        if self.presentedViewController != nil {
-          self.dismiss(animated: true)
-        }
-
-        // Exit early if we are not presenting a new interruption picker.
-        if interruptionPickerState == nil {
-          return
-        }
-
-        // Otherwise, create a new interruption picker and prepare to present it as a modal half sheet.
-        let interruptionPicker = InterruptionPickerViewController(state: interruptionPickerState!)
-        interruptionPicker.modalPresentationStyle = .pageSheet
-        if let sheet = interruptionPicker.sheetPresentationController {
-          sheet.preferredCornerRadius = 20
-          sheet.prefersGrabberVisible = true
-          sheet.prefersScrollingExpandsWhenScrolledToEdge = false
-          sheet.detents = [.medium(), .large()]
-        }
-
-        // Show the picker on the screen and give the store a chance to update its state.
-        self.present(interruptionPicker, animated: true, completion: {
-          store.receiveAction = .timer(.ticked)
-        })
-
-        // Wait for the user to perform an action and then send it to the store.
-        Task {
-          for await action in interruptionPicker.actions {
-            switch action {
-            case .dismissed:
-              store.receiveAction = .navigation(.interruptionPickerDismissed)
-            case let .interruptionTapped(interruption):
-              store.receiveAction = .interruptionTapped(interruption)
-            }
-          }
-        }
-      }
-      .store(in: &cancellables)
-
-    store.$state
-      .map(\.appearance)
-      .removeDuplicates()
-      .receive(on: DispatchQueue.main)
-      .map { theme -> UIUserInterfaceStyle in
-        switch theme {
-        case .dark:
-          return .dark
-        case .light:
-          return .light
-        case .auto:
-          return .unspecified
-        }
-      }
-      .sink { theme in
-        UIView.animate(withDuration: 0.5) {
-          UIApplication.shared.keyWindow?.overrideUserInterfaceStyle = theme
-          self.overrideUserInterfaceStyle = theme
-        }
-      }
-      .store(in: &cancellables)
-
-    store.$state
-      .map(\.shouldStayAwake)
-      .removeDuplicates()
-      .receive(on: DispatchQueue.main)
-      .sink { shouldStawyAwake in
-        UIApplication.shared.isIdleTimerDisabled = shouldStawyAwake
-      }
-      .store(in: &cancellables)
+//        // Exit early if we are not presenting a new interruption picker.
+//        if interruptionPickerState == nil {
+//          return
+//        }
+//
+//        // Otherwise, create a new interruption picker and prepare to present it as a modal half sheet.
+//        let interruptionPicker = InterruptionPickerViewController(state: interruptionPickerState!)
+//        interruptionPicker.modalPresentationStyle = .pageSheet
+//        if let sheet = interruptionPicker.sheetPresentationController {
+//          sheet.preferredCornerRadius = 20
+//          sheet.prefersGrabberVisible = true
+//          sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+//          sheet.detents = [.medium(), .large()]
+//        }
+//
+//        // Show the picker on the screen and give the store a chance to update its state.
+//        self.present(interruptionPicker, animated: true, completion: {
+//          store.receiveAction = .timer(.ticked)
+//        })
+//
+//        // Wait for the user to perform an action and then send it to the store.
+//        Task {
+//          for await action in interruptionPicker.actions {
+//            switch action {
+//            case .dismissed:
+//              store.receiveAction = .navigation(.interruptionPickerDismissed)
+//            case let .interruptionTapped(interruption):
+//              store.receiveAction = .interruptionTapped(interruption)
+//            }
+//          }
+//        }
+//      }
+//      .store(in: &cancellables)
+//
+//    store.$state
+//      .map(\.appearance)
+//      .removeDuplicates()
+//      .receive(on: DispatchQueue.main)
+//      .map { theme -> UIUserInterfaceStyle in
+//        switch theme {
+//        case .dark:
+//          return .dark
+//        case .light:
+//          return .light
+//        case .auto:
+//          return .unspecified
+//        }
+//      }
+//      .sink { theme in
+//        UIView.animate(withDuration: 0.5) {
+//          UIApplication.shared.keyWindow?.overrideUserInterfaceStyle = theme
+//          self.overrideUserInterfaceStyle = theme
+//        }
+//      }
+//      .store(in: &cancellables)
+//
+//    store.$state
+//      .map(\.shouldStayAwake)
+//      .removeDuplicates()
+//      .receive(on: DispatchQueue.main)
+//      .sink { shouldStawyAwake in
+//        UIApplication.shared.isIdleTimerDisabled = shouldStawyAwake
+//      }
+//      .store(in: &cancellables)
+//
+    ////    store.notifications
+    ////      .removeDuplicates { $0.timeline == $1.timeline && $0.settings == $1.settings }
+    ////      .sink { notificationSettings in
+    ////        Task {
+    ////          do {
+    ////          let authorization = try await UNUserNotificationCenter.current()
+    ////            .requestAuthorization(options: [.alert, .sound, .providesAppNotificationSettings])
+    ////
+    ////          if authorization == true {
+    ////            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+    ////
+    ////            let factory = NotificationsFactory()
+    ////            let notificationRequests = await factory.makeCountingDownNotifications(for: notificationSettings.timeline, at: notificationSettings.currentTick)
+    ////
+    ////            for notification in notificationRequests {
+    ////              try await UNUserNotificationCenter.current().add(notification)
+    ////            }
+    ////
+    //////            for notification in timeline.makeCountdownPausedSignificantlyNotifications() {
+    //////              try await UNUserNotificationCenter.current().add(notification)
+    //////            }
+    ////
+    //////            timeline.makeCountdownPausedSignificantlyNotifications()
+    //////              .forEach { notificationRequest in
+    //////                UNUserNotificationCenter.current().add(notificationRequest)
+    //////              }
+    ////
+    ////          }
+    ////          } catch {
+    ////            print (error)
+    ////          }
+    ////        }
+    ////      }
+    ////      .store(in: &cancellables)
+//
+//    UNUserNotificationCenter.current().delegate = self
   }
 
   override public func willTransition(to newCollection: UITraitCollection, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -902,12 +1179,13 @@ public class AppViewController: UIViewController {
       // Nudge the store to force some output so the view gets a chance to re-render it's layout if needed
       // after a view bounds or traits change. This helps us avoid sending view state back into the store
       // forcing the view to interpret the best layout for it's orientation and size and not the store.
-      store.receiveAction = .tabBarItemTapped(store.state.selectedDataTab)
+//      store.receiveAction = .tabBarItemTapped(store.state.selectedDataTab)
+      self.viewStore?.send(.tabBarItemTapped(self.viewStore.state.selectedDataTab))
     }
   }
 
   private lazy var ringsView: RingsView = {
-    let storeRingsOutput = store.$state
+    let storeRingsOutput = viewStore.publisher
       .map { appState -> RingsViewState in
 
         if appState.columnDisplayMode == .doubleColumn {
@@ -929,14 +1207,16 @@ public class AppViewController: UIViewController {
 
     let rings = RingsView(state: .init())
 
-    storeRingsOutput
-      .assign(to: \.state, on: rings)
-      .store(in: &cancellables)
-
-    rings.$sentActions
-      .compactMap { $0 }
-      .map { .ringsView($0, whilePortrait: self.view.isPortrait) }
-      .assign(to: &store.$receiveAction)
+//    storeRingsOutput
+//      .assign(to: \.state, on: rings)
+//      .store(in: &cancellables)
+//
+//    rings.$sentActions
+//      .compactMap { $0 }
+    ////      .map { .ringsView($0, whilePortrait: self.view.isPortrait) }
+//      .sink { self.viewStore.send(.ringsView($0, whilePortrait: true))}
+//      .store(in: &cancellables)
+    ////      .assign(to: self.viewStore.send)
 
     return rings
   }()
@@ -993,10 +1273,11 @@ public class AppViewController: UIViewController {
 
   private lazy var activityLogHeading: ActivityLogHeading = {
     ActivityLogHeading(frame: .zero,
-                       input: store.$state
-                         .map(\.dataHeadlineContent)
-                         .compactMap { $0 }
-                         .eraseToAnyPublisher())
+//                       input: store.$state
+                       input: Just(("", "")).eraseToAnyPublisher())
+//                         .map(\.dataHeadlineContent)
+//                         .compactMap { $0 }
+//                         .eraseToAnyPublisher())
   }()
 
   var noShowDataLayoutMode: [NSLayoutConstraint] = []
@@ -1149,9 +1430,9 @@ public class AppViewController: UIViewController {
 extension AppViewController: UITabBarDelegate {
   public func tabBar(_: UITabBar, didSelect item: UITabBarItem) {
     switch item.tag {
-    case 0: store.receiveAction = .tabBarItemTapped(.today)
-    case 1: store.receiveAction = .tabBarItemTapped(.tasks)
-    case 2: store.receiveAction = .tabBarItemTapped(.charts)
+    case 0: viewStore.send(.tabBarItemTapped(.today))
+    case 1: viewStore.send(.tabBarItemTapped(.tasks))
+    case 2: viewStore.send(.tabBarItemTapped(.charts))
     default: break
     }
   }
@@ -1173,7 +1454,7 @@ extension UIAction {
              image: UIImage(systemName: "arrow.right"),
              discoverabilityTitle: "Start Break") { _ in
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-        store.receiveAction = .timeline(.resume)
+//        store.receiveAction = .timeline(.resume)
       }
     }
   }
@@ -1183,7 +1464,7 @@ extension UIAction {
              image: UIImage(systemName: "arrow.right"),
              discoverabilityTitle: "Start Work Period") { _ in
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-        store.receiveAction = .timeline(.resume)
+//        store.receiveAction = .timeline(.resume)
       }
     }
   }
@@ -1193,7 +1474,7 @@ extension UIAction {
              image: UIImage(systemName: "arrow.right.to.line"),
              discoverabilityTitle: "Skip Break") { _ in
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-        store.receiveAction = .timeline(.skipCurrentPeriod)
+//        store.receiveAction = .timeline(.skipCurrentPeriod)
       }
     }
   }
@@ -1203,7 +1484,7 @@ extension UIAction {
              image: UIImage(systemName: "arrow.right.to.line"),
              discoverabilityTitle: "Skip To Next Work period") { _ in
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-        store.receiveAction = .timeline(.skipCurrentPeriod)
+//        store.receiveAction = .timeline(.skipCurrentPeriod)
       }
     }
   }
@@ -1213,7 +1494,7 @@ extension UIAction {
              image: UIImage(systemName: "arrow.right.to.line"),
              discoverabilityTitle: "Skip To Next Break") { _ in
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-        store.receiveAction = .timeline(.skipCurrentPeriod)
+//        store.receiveAction = .timeline(.skipCurrentPeriod)
       }
     }
   }
@@ -1223,7 +1504,7 @@ extension UIAction {
              image: UIImage(systemName: "arrow.right.to.line"),
              discoverabilityTitle: "Resume Break") { _ in
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-        store.receiveAction = .timeline(.resume)
+//        store.receiveAction = .timeline(.resume)
       }
     }
   }
@@ -1233,7 +1514,7 @@ extension UIAction {
              image: UIImage(systemName: "arrow.right"),
              discoverabilityTitle: "Resume Work Period") { _ in
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-        store.receiveAction = .timeline(.resume)
+//        store.receiveAction = .timeline(.resume)
       }
     }
   }
@@ -1243,7 +1524,7 @@ extension UIAction {
              image: UIImage(systemName: "pause"),
              discoverabilityTitle: "Pause Break") { _ in
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-        store.receiveAction = .timeline(.pause)
+//        store.receiveAction = .timeline(.pause)
       }
     }
   }
@@ -1253,7 +1534,7 @@ extension UIAction {
              image: UIImage(systemName: "pause"),
              discoverabilityTitle: "Pause Work Period") { _ in
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-        store.receiveAction = .timeline(.pause)
+//        store.receiveAction = .timeline(.pause)
       }
     }
   }
@@ -1262,7 +1543,7 @@ extension UIAction {
     UIAction(title: "Restart Work Period",
              image: UIImage(systemName: "arrow.left.to.line"),
              discoverabilityTitle: "Restart Work Period") { _ in
-      store.receiveAction = .timeline(.restartCurrentPeriod)
+//      store.receiveAction = .timeline(.restartCurrentPeriod)
     }
   }
 
@@ -1270,19 +1551,19 @@ extension UIAction {
     UIAction(title: "Restart Break",
              image: UIImage(systemName: "arrow.left.to.line"),
              discoverabilityTitle: "Restart Break") { _ in
-      store.receiveAction = .timeline(.restartCurrentPeriod)
+//      store.receiveAction = .timeline(.restartCurrentPeriod)
     }
   }
 
   static var dismissSettingsEditor: UIAction {
     UIAction(title: "Cancel", discoverabilityTitle: "Cancel") { _ in
-      store.receiveAction = .navigation(.settingsEditorDismissed)
+//      store.receiveAction = .navigation(.settingsEditorDismissed)
     }
   }
 
   static var showSettingsEditor: UIAction {
     UIAction(image: UIImage(systemName: "gear"), discoverabilityTitle: "Show Settings") { _ in
-      store.receiveAction = .navigation(.settingsEditorSummoned)
+//      store.receiveAction = .navigation(.settingsEditorSummoned)
     }
   }
 
@@ -1295,7 +1576,7 @@ extension UIAction {
                      usingSpringWithDamping: 0.9,
                      initialSpringVelocity: 0.7,
                      options: [.allowUserInteraction]) {
-        store.receiveAction = .showDataButtonTapped
+//        store.receiveAction = .showDataButtonTapped
         view.superview?.layoutIfNeeded()
       }
     }
@@ -1310,7 +1591,7 @@ extension UIAction {
                      usingSpringWithDamping: 0.9,
                      initialSpringVelocity: 0.7,
                      options: [.allowUserInteraction]) {
-        store.receiveAction = .tabBarItemTapped(.charts)
+//        store.receiveAction = .tabBarItemTapped(.charts)
         view.superview?.layoutIfNeeded()
       }
     }
@@ -1325,7 +1606,7 @@ extension UIAction {
                      usingSpringWithDamping: 0.9,
                      initialSpringVelocity: 0.7,
                      options: [.allowUserInteraction]) {
-        store.receiveAction = .tabBarItemTapped(.tasks)
+//        store.receiveAction = .tabBarItemTapped(.tasks)
         view.superview?.layoutIfNeeded()
       }
     }
@@ -1340,7 +1621,7 @@ extension UIAction {
                      usingSpringWithDamping: 0.9,
                      initialSpringVelocity: 0.7,
                      options: [.allowUserInteraction]) {
-        store.receiveAction = .tabBarItemTapped(.today)
+//        store.receiveAction = .tabBarItemTapped(.today)
         view.superview?.layoutIfNeeded()
       }
     }
@@ -1443,14 +1724,14 @@ final class ActivityLog: UIView {
       logEntry.trailingAnchor.constraint(equalTo: parent.trailingAnchor, constant: 20)
     }
 
-    store.$state
-      .map(\.userActivities.history)
-      .removeDuplicates()
-      .map { history -> String in
-        "\(history.count) user events so far... (Last event: \(history.last?.action.logName ?? "None"))"
-      }
-      .assign(to: \.text, on: logEntry)
-      .store(in: &cancellables)
+//    store.$state
+//      .map(\.userActivities.history)
+//      .removeDuplicates()
+//      .map { history -> String in
+//        "\(history.count) user events so far... (Last event: \(history.last?.action.logName ?? "None"))"
+//      }
+//      .assign(to: \.text, on: logEntry)
+//      .store(in: &cancellables)
   }
 
   @available(*, unavailable)
@@ -1569,7 +1850,7 @@ extension Interruption {
              discoverabilityTitle: excuse) { _ in
       Task {
         await MainActor.run {
-          store.receiveAction = .interruptionTapped(self)
+//          store.receiveAction = .interruptionTapped(self)
         }
       }
     }
@@ -1622,8 +1903,13 @@ extension AppState {
   }
 
   var timelineIsInterrupted: Bool {
-    if userActivities.isCountingDown { return false }
-    if timeline.periods.periodAt(userActivities.currentTick).firstTick == userActivities.currentTick { return false }
+    if userActivities.isCountingDown {
+      return false
+    }
+
+    if timeline.periods.periodAt(userActivities.currentTick).firstTick == userActivities.currentTick {
+      return false
+    }
 
     return true
   }
@@ -1812,26 +2098,26 @@ private extension RingsPopupMenuState {
   }
 }
 
-extension AppStore {
-  var menuPopupViewModel: AnyPublisher<RingsPopupMenuState, Never> {
-    $state
-      .map(RingsPopupMenuState.init)
-      .removeDuplicates()
-      .eraseToAnyPublisher()
-  }
-}
+// extension AppStore {
+//  var menuPopupViewModel: AnyPublisher<RingsPopupMenuState, Never> {
+//    $state
+//      .map(RingsPopupMenuState.init)
+//      .removeDuplicates()
+//      .eraseToAnyPublisher()
+//  }
+// }
 
-extension AppStore {
-  var resumeSoonProgressBarViewModel: AnyPublisher<ResumeSoonProgressBarViewModel?, Never> {
-    $state
-      .map { ($0.timelineIsInterruptedBeforeTimeout(at: Date())) && ($0.clarifiedInterruption == nil)
-        ? ResumeSoonProgressBarViewModel(isVisible: true)
-        : nil
-      }
-      .removeDuplicates()
-      .eraseToAnyPublisher()
-  }
-}
+// extension AppStore {
+//  var resumeSoonProgressBarViewModel: AnyPublisher<ResumeSoonProgressBarViewModel?, Never> {
+//    $state
+//      .map { ($0.timelineIsInterruptedBeforeTimeout(at: Date())) && ($0.clarifiedInterruption == nil)
+//        ? ResumeSoonProgressBarViewModel(isVisible: true)
+//        : nil
+//      }
+//      .removeDuplicates()
+//      .eraseToAnyPublisher()
+//  }
+// }
 
 struct ResumeSoonProgressBarViewModel: Equatable {
   var isVisible: Bool
@@ -1853,5 +2139,67 @@ extension SettingsEditorState.PeriodSettings {
 extension AppState {
   var shouldStayAwake: Bool {
     settings.neverSleep && userActivities.isCountingDown
+  }
+}
+
+extension AppViewController: UNUserNotificationCenterDelegate {
+  public func userNotificationCenter(_: UNUserNotificationCenter,
+                                     willPresent _: UNNotification) async -> UNNotificationPresentationOptions
+  {
+    [.banner, .list, .sound]
+  }
+}
+
+// extension AppStore {
+//  var notifications: AnyPublisher<NotificationsUserState, Never> {
+//    $state
+//      .map(NotificationsUserState.init)
+//      .removeDuplicates()
+//      .eraseToAnyPublisher()
+//  }
+// }
+
+struct NotificationsUserState: Equatable {
+  let timeline: Timeline
+  let currentTick: Tick
+  let settings: NotificationsSettingsState
+}
+
+private extension NotificationsUserState {
+  init(state: AppState) {
+    self.init(timeline: state.timeline, currentTick: state.userActivities.currentTick, settings: state.notificationSettings)
+  }
+}
+
+private func postNotifications(state: AppState) -> Effect {
+  .fireAndForget {
+    Task {
+      do {
+        let authorization = try await UNUserNotificationCenter.current()
+          .requestAuthorization(options: [.alert, .sound, .providesAppNotificationSettings])
+
+        if authorization == true {
+          UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+
+          let factory = NotificationsFactory()
+          let notificationRequests = await factory.makeCountingDownNotifications(for: state.timeline, at: state.userActivities.currentTick)
+
+          for notification in notificationRequests {
+            try await UNUserNotificationCenter.current().add(notification)
+          }
+
+//            for notification in timeline.makeCountdownPausedSignificantlyNotifications() {
+//              try await UNUserNotificationCenter.current().add(notification)
+//            }
+
+//            timeline.makeCountdownPausedSignificantlyNotifications()
+//              .forEach { notificationRequest in
+//                UNUserNotificationCenter.current().add(notificationRequest)
+//              }
+        }
+      } catch {
+        print(error)
+      }
+    }
   }
 }

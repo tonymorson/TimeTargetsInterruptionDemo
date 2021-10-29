@@ -1,14 +1,21 @@
 import Foundation
 import UIKit
 
-final class RingView: UIView {
+internal final class RingView: UIView {
   var canAnimateZIndex: Bool {
     set { ringLayer.canAnimateZIndex = newValue }
     get { ringLayer.canAnimateZIndex }
   }
 
   var color: UIColor {
-    set { ringLayer.color = newValue.resolvedColor(with: .init(userInterfaceStyle: traitCollection.userInterfaceStyle)).cgColor }
+    set {
+      guard newValue != color else { return }
+
+      ringLayer.color = newValue
+        .resolvedColor(with: .init(userInterfaceStyle: traitCollection.userInterfaceStyle))
+        .cgColor
+    }
+
     get { UIColor(cgColor: ringLayer.color) }
   }
 
@@ -21,13 +28,25 @@ final class RingView: UIView {
   }
 
   var value: CGFloat {
-    set { ringLayer.value = newValue }
+    set {
+      guard newValue != value else { return }
+      ringLayer.value = newValue
+    }
+
     get { ringLayer.value }
   }
 
   var zIndex: CGFloat {
-    set { ringLayer.zIndex = newValue }
+    set {
+      guard newValue != zIndex else { return }
+      ringLayer.zIndex = newValue
+    }
+
     get { ringLayer.zIndex }
+  }
+
+  private var ringLayer: RingLayer {
+    layer as! RingLayer
   }
 
   override init(frame: CGRect) {
@@ -48,18 +67,6 @@ final class RingView: UIView {
     RingLayer.self
   }
 
-  override public func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-    super.traitCollectionDidChange(previousTraitCollection)
-
-    if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
-      layer.setNeedsLayout()
-    }
-  }
-
-  private var ringLayer: RingLayer {
-    layer as! RingLayer
-  }
-
   private func setupRingLayer() {
     ringLayer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
     ringLayer.contentsScale = UIScreen.main.scale * 1.4
@@ -67,6 +74,7 @@ final class RingView: UIView {
 }
 
 private final class RingLayer: CALayer {
+
   @NSManaged var color: CGColor
   @NSManaged var value: CGFloat
   @NSManaged var zIndex: CGFloat
@@ -107,6 +115,18 @@ private final class RingLayer: CALayer {
 
   required init?(coder: NSCoder) {
     super.init(coder: coder)
+  }
+
+  override class func needsDisplay(forKey key: String) -> Bool {
+    if
+      key == "color"
+      || key == "value"
+      || key == "zIndex"
+    {
+      return true
+    } else {
+      return super.needsDisplay(forKey: key)
+    }
   }
 
   override func action(forKey event: String) -> CAAction? {
@@ -178,18 +198,6 @@ private final class RingLayer: CALayer {
     ctx.addPath(innerPath.cgPath)
 
     ctx.drawPath(using: .stroke)
-  }
-
-  override class func needsDisplay(forKey key: String) -> Bool {
-    if
-      key == "color"
-      || key == "value"
-      || key == "zIndex"
-    {
-      return true
-    } else {
-      return super.needsDisplay(forKey: key)
-    }
   }
 }
 

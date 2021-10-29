@@ -3,7 +3,7 @@ import Foundation
 import SwiftUIKit
 import UIKit
 
-public struct NotificationSettingsEditorState: Equatable {
+public struct NotificationsSettingsState: Equatable {
   public var showNotifications: Bool = false
   public var playSound: Bool = true
 
@@ -15,7 +15,14 @@ public struct NotificationSettingsEditorState: Equatable {
   public var onHalfwayToDailyTarget: Bool = true
   public var onReachingDailyTarget: Bool = true
 
-  public init(showNotifications: Bool = false, playSound: Bool = true, onStartPeriod: Bool = true, onStartBreak: Bool = true, onLongPause: Bool = true, onHalfwayToDailyTarget: Bool = true, onReachingDailyTarget: Bool = true) {
+  public init(showNotifications: Bool = false,
+              playSound: Bool = true,
+              onStartPeriod: Bool = true,
+              onStartBreak: Bool = true,
+              onLongPause: Bool = true,
+              onHalfwayToDailyTarget: Bool = true,
+              onReachingDailyTarget: Bool = true)
+  {
     self.showNotifications = showNotifications
     self.playSound = playSound
     self.onStartPeriod = onStartPeriod
@@ -36,7 +43,7 @@ public enum NotificationSettingsEditorAction: Equatable, Codable {
   case onReachingDailyTargetToggled(Bool)
 }
 
-public func notificationSettingsEditorReducer(state: inout NotificationSettingsEditorState,
+public func notificationSettingsEditorReducer(state: inout NotificationsSettingsState,
                                               action: NotificationSettingsEditorAction)
 {
   switch action {
@@ -57,10 +64,10 @@ public func notificationSettingsEditorReducer(state: inout NotificationSettingsE
   }
 }
 
-public final class NotificationSettingsEditor: Form<NotificationSettingsEditorState> {
+public final class NotificationSettingsEditor: Form<NotificationsSettingsState> {
   public var actions: PassthroughSubject<NotificationSettingsEditorAction, Never>!
 
-  public init(userData: AnyPublisher<NotificationSettingsEditorState, Never>) {
+  public init(userData: AnyPublisher<NotificationsSettingsState, Never>) {
     self.actions = PassthroughSubject<NotificationSettingsEditorAction, Never>()
 
     let actions = actions!

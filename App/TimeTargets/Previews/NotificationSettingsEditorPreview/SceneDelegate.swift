@@ -2,7 +2,7 @@ import Combine
 import NotificationSettingsEditor
 import UIKit
 
-let settings = CurrentValueSubject<NotificationSettingsEditorState, Never>(NotificationSettingsEditorState())
+let settings = CurrentValueSubject<NotificationsState, Never>(NotificationsState())
 let environment = NotificationSettingsEditorEnvironment()
 
 final class SceneDelegate: UIResponder, UIWindowSceneDelegate {

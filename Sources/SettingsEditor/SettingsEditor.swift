@@ -1,7 +1,7 @@
 import Combine
 import Durations
 import Foundation
-import NotificationSettingsEditor
+import Notifications
 import SwiftUIKit
 import UIKit
 
@@ -42,14 +42,14 @@ public struct SettingsEditorState: Equatable {
 
   public var appearance: Appearance
   public var neverSleep: Bool
-  public var notifications: NotificationSettingsEditorState
+  public var notifications: NotificationsSettingsState
   public var periods: PeriodSettings
 
   public var interruptionTimeout: Double
 
   public init(appearance: Appearance,
               neverSleep: Bool,
-              notifications: NotificationSettingsEditorState,
+              notifications: NotificationsSettingsState,
               periods: SettingsEditorState.PeriodSettings,
               interruptionTimeout: Double = 3)
   {
@@ -262,9 +262,9 @@ private class NotificationSettingsRow: UITableViewCell, CellPickable {
   public var actions: PassthroughSubject<SettingsEditorAction, Never>
 
   private var cancellables: [AnyCancellable] = []
-  private var settings: AnyPublisher<NotificationSettingsEditorState, Never>
+  private var settings: AnyPublisher<NotificationsSettingsState, Never>
 
-  public init(settings: AnyPublisher<NotificationSettingsEditorState, Never>,
+  public init(settings: AnyPublisher<NotificationsSettingsState, Never>,
               actions: PassthroughSubject<SettingsEditorAction, Never>)
   {
     self.settings = settings

@@ -19,8 +19,8 @@ let package = Package(
       targets: ["InterruptionPicker"]
     ),
     .library(
-      name: "NotificationSettingsEditor",
-      targets: ["NotificationSettingsEditor"]
+      name: "Notifications",
+      targets: ["Notifications"]
     ),
     .library(
       name: "RingsView",
@@ -37,6 +37,10 @@ let package = Package(
     .library(
       name: "SwiftUIKit",
       targets: ["SwiftUIKit"]
+    ),
+    .library(
+      name: "TimelineTickEffect",
+      targets: ["TimelineTickEffect"]
     ),
 
     // Model
@@ -67,6 +71,7 @@ let package = Package(
   ],
 
   dependencies: [
+    .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", .branch("main")),
     // Dependencies declare other packages that this package depends on.
     // .package(url: /* package url */, from: "1.0.0"),
   ],
@@ -75,19 +80,41 @@ let package = Package(
     // Targets can depend on other targets in this package, and on products in packages this package depends on.
     .target(
       name: "Application",
-      dependencies: ["InterruptionPicker", "RingsPopupMenu", "RingsView", "SettingsEditor", "SwiftUIKit", "Timeline", "TimelineReports"]
+      dependencies: [
+        "InterruptionPicker",
+        "RingsPopupMenu",
+        "RingsView",
+        "SettingsEditor",
+        "SwiftUIKit",
+        "Timeline",
+        "TimelineReports",
+        .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+      ]
     ),
     .target(
       name: "InterruptionPicker",
       dependencies: ["SwiftUIKit", "Timeline"]
     ),
     .target(
-      name: "NotificationSettingsEditor",
-      dependencies: ["SwiftUIKit"]
+      name: "Notifications",
+      dependencies: ["SwiftUIKit", "Timeline"]
     ),
     .target(
       name: "RingsView",
-      dependencies: ["SwiftUIKit"]
+      dependencies: [
+        "SwiftUIKit",
+        "Ticks",
+        "Timeline",
+        "TimelineReports",
+        "TimelineTickEffect",
+        .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+      ]
+    ),
+    .testTarget(
+      name: "RingsViewTests",
+      dependencies: [
+        "RingsView"
+      ]
     ),
     .target(
       name: "RingsPopupMenu",
@@ -95,7 +122,7 @@ let package = Package(
     ),
     .target(
       name: "SettingsEditor",
-      dependencies: ["Durations", "NotificationSettingsEditor"]
+      dependencies: ["Durations", "Notifications"]
     ),
     .target(
       name: "SwiftUIKit",
@@ -123,6 +150,14 @@ let package = Package(
     .target(
       name: "Timeline",
       dependencies: ["Countdown", "Periods", "Ticks"]
+    ),
+    .target(
+      name: "TimelineTickEffect",
+      dependencies: [
+        "Ticks",
+        "Timeline",
+        .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+      ]
     ),
     .target(
       name: "TimelineReports",

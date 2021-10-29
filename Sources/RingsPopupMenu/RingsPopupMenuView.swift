@@ -11,6 +11,7 @@ public struct RingsPopupMenuState: Equatable {
   }
 }
 
+@MainActor
 public final class RingsPopupMenuView: UIButton {
   public var viewModel: RingsPopupMenuState {
     didSet {
@@ -21,39 +22,34 @@ public final class RingsPopupMenuView: UIButton {
 
   var title: (String, UIColor) = ("", .label) {
     didSet {
-      DispatchQueue.main.async {
-        var title = AttributedString(self.title.0)
-        title.font = UIFont.systemFont(ofSize: 21, weight: .light).rounded()
-        title.foregroundColor = self.title.1
-        self.configuration?.attributedTitle = title
-      }
+      var title = AttributedString(title.0)
+      title.font = UIFont.systemFont(ofSize: 24, weight: .light).rounded()
+      title.foregroundColor = self.title.1
+
+      configuration?.attributedTitle = title
     }
   }
 
   var subtitle: (String, UIColor) = ("", .label) {
     didSet {
-      DispatchQueue.main.async {
-        var title = AttributedString(self.subtitle.0)
-        title.font = UIFont.systemFont(ofSize: 17, weight: .light)
-        title.foregroundColor = self.subtitle.1
+      var title = AttributedString(subtitle.0)
+      title.font = UIFont.systemFont(ofSize: 20, weight: .light)
+      title.foregroundColor = subtitle.1
 
-        self.configuration?.imagePlacement = .bottom
-        self.configuration?.imagePadding = 8
-        self.configuration?.imageColorTransformer = .grayscale
-        self.configuration?.attributedSubtitle = title
-      }
+      configuration?.imagePlacement = .bottom
+      configuration?.imagePadding = 8
+      configuration?.imageColorTransformer = .grayscale
+      configuration?.attributedSubtitle = title
     }
   }
 
   public var menuItems: [UIMenuElement] = [] {
     didSet {
-      DispatchQueue.main.async {
-        self.menu = UIMenu(children: self.menuItems)
-      }
+      menu = UIMenu(children: menuItems)
     }
   }
 
-  public convenience init() {
+  @MainActor public convenience init() {
     var configuration = UIButton.Configuration.gray()
     configuration.cornerStyle = .dynamic
     configuration.baseForegroundColor = UIColor.systemRed
