@@ -1,0 +1,5 @@
+--enable sortedSwitchCases
+--indent 2
+--swiftversion 5.5
+--header strip
+--patternlet inline
