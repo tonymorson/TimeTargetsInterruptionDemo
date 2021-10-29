@@ -633,21 +633,3 @@ extension RingsViewState {
     .init(content: content, prominentRing: prominentRing)
   }
 }
-
-import SwiftUI
-
-struct RingsViewRepresentable: UIViewRepresentable {
-  let store = Store(initialState: .init(), reducer: ringsViewReducer, environment: .init(date: Date.init))
-
-  func makeUIView(context _: Context) -> UIView {
-    RingsView(viewStore: ViewStore(store))
-  }
-
-  func updateUIView(_: UIView, context _: Context) {}
-}
-
-struct RingsView_Preview: PreviewProvider {
-  static var previews: some View {
-    RingsViewRepresentable()
-  }
-}
