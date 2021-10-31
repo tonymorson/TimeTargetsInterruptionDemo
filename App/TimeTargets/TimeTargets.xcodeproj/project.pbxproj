@@ -25,6 +25,9 @@
 		41B9AA7A26EF315500CE6606 /* Boilerplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B9AA7926EF315500CE6606 /* Boilerplate.swift */; };
 		41B9AA7C26EF315500CE6606 /* RingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B9AA7B26EF315500CE6606 /* RingsViewController.swift */; };
 		41B9AA8C26EF324500CE6606 /* RingsView in Frameworks */ = {isa = PBXBuildFile; productRef = 41B9AA8B26EF324500CE6606 /* RingsView */; };
+		41B9D206272EE03000B0988A /* Preview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B9D1C0272EDB0800B0988A /* Preview.swift */; };
+		41B9D207272EE03000B0988A /* Boilerplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B9D1BE272EDB0800B0988A /* Boilerplate.swift */; };
+		41B9D209272EE33D00B0988A /* PromptsFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 41B9D208272EE33D00B0988A /* PromptsFeature */; };
 		41D379442728E1FF00079E94 /* XcodePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D379422728E16600079E94 /* XcodePreview.swift */; };
 /* End PBXBuildFile section */
 
@@ -52,6 +55,10 @@
 		41B9AA7926EF315500CE6606 /* Boilerplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Boilerplate.swift; sourceTree = "<group>"; };
 		41B9AA7B26EF315500CE6606 /* RingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingsViewController.swift; sourceTree = "<group>"; };
 		41B9AA8726EF315900CE6606 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		41B9D1BE272EDB0800B0988A /* Boilerplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Boilerplate.swift; sourceTree = "<group>"; };
+		41B9D1C0272EDB0800B0988A /* Preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preview.swift; sourceTree = "<group>"; };
+		41B9D1F2272EE01D00B0988A /* PromptsFeaturePreview.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PromptsFeaturePreview.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		41B9D202272EE01E00B0988A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		41D379422728E16600079E94 /* XcodePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcodePreview.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -93,6 +100,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				41B9AA8C26EF324500CE6606 /* RingsView in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		41B9D1EF272EE01D00B0988A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				41B9D209272EE33D00B0988A /* PromptsFeature in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -142,6 +157,7 @@
 			children = (
 				418F9A1226ECB39A0005624B /* iOS */,
 				416F64F226EE11E5000DF69C /* Previews */,
+				41B9D1F3272EE01D00B0988A /* PromptsFeaturePreview */,
 				418F99F726ECB3830005624B /* Products */,
 				4117DBFB26ECB59100DE4AEA /* Frameworks */,
 			);
@@ -155,6 +171,7 @@
 				416F64F726EE244C000DF69C /* SettingsEditorPreview.app */,
 				41B9AA7726EF315500CE6606 /* RingsViewPreview.app */,
 				4181CC3427065685007D9AD9 /* InterruptionPickerPreview.app */,
+				41B9D1F2272EE01D00B0988A /* PromptsFeaturePreview.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -191,6 +208,16 @@
 				41B9AA8726EF315900CE6606 /* Info.plist */,
 			);
 			path = RingsViewPreview;
+			sourceTree = "<group>";
+		};
+		41B9D1F3272EE01D00B0988A /* PromptsFeaturePreview */ = {
+			isa = PBXGroup;
+			children = (
+				41B9D1BE272EDB0800B0988A /* Boilerplate.swift */,
+				41B9D1C0272EDB0800B0988A /* Preview.swift */,
+				41B9D202272EE01E00B0988A /* Info.plist */,
+			);
+			path = PromptsFeaturePreview;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -297,13 +324,33 @@
 			productReference = 41B9AA7726EF315500CE6606 /* RingsViewPreview.app */;
 			productType = "com.apple.product-type.application";
 		};
+		41B9D1F1272EE01D00B0988A /* PromptsFeaturePreview */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 41B9D203272EE01E00B0988A /* Build configuration list for PBXNativeTarget "PromptsFeaturePreview" */;
+			buildPhases = (
+				41B9D1EE272EE01D00B0988A /* Sources */,
+				41B9D1EF272EE01D00B0988A /* Frameworks */,
+				41B9D1F0272EE01D00B0988A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PromptsFeaturePreview;
+			packageProductDependencies = (
+				41B9D208272EE33D00B0988A /* PromptsFeature */,
+			);
+			productName = PromptsFeaturePreview;
+			productReference = 41B9D1F2272EE01D00B0988A /* PromptsFeaturePreview.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		418F99EE26ECB3830005624B /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 1300;
+				LastSwiftUpdateCheck = 1310;
 				LastUpgradeCheck = 1250;
 				TargetAttributes = {
 					416F64F626EE244C000DF69C = {
@@ -320,6 +367,9 @@
 					};
 					41B9AA7626EF315500CE6606 = {
 						CreatedOnToolsVersion = 13.0;
+					};
+					41B9D1F1272EE01D00B0988A = {
+						CreatedOnToolsVersion = 13.1;
 					};
 				};
 			};
@@ -341,6 +391,7 @@
 				416F64F626EE244C000DF69C /* SettingsEditorPreview */,
 				41B9AA7626EF315500CE6606 /* RingsViewPreview */,
 				4181CC3327065685007D9AD9 /* InterruptionPickerPreview */,
+				41B9D1F1272EE01D00B0988A /* PromptsFeaturePreview */,
 			);
 		};
 /* End PBXProject section */
@@ -378,6 +429,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		41B9AA7526EF315500CE6606 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		41B9D1F0272EE01D00B0988A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -450,6 +508,15 @@
 				41B9AA7A26EF315500CE6606 /* Boilerplate.swift in Sources */,
 				41D379442728E1FF00079E94 /* XcodePreview.swift in Sources */,
 				41B9AA7C26EF315500CE6606 /* RingsViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		41B9D1EE272EE01D00B0988A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				41B9D207272EE03000B0988A /* Boilerplate.swift in Sources */,
+				41B9D206272EE03000B0988A /* Preview.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -855,6 +922,62 @@
 			};
 			name = Release;
 		};
+		41B9D204272EE01E00B0988A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = F3Q5VERFTA;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PromptsFeaturePreview/Info.plist;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.something.PromptsFeaturePreview;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		41B9D205272EE01E00B0988A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = F3Q5VERFTA;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PromptsFeaturePreview/Info.plist;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.something.PromptsFeaturePreview;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -912,6 +1035,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		41B9D203272EE01E00B0988A /* Build configuration list for PBXNativeTarget "PromptsFeaturePreview" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				41B9D204272EE01E00B0988A /* Debug */,
+				41B9D205272EE01E00B0988A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -934,6 +1066,10 @@
 		41B9AA8B26EF324500CE6606 /* RingsView */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = RingsView;
+		};
+		41B9D208272EE33D00B0988A /* PromptsFeature */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PromptsFeature;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -27,8 +27,8 @@ let package = Package(
       targets: ["RingsView"]
     ),
     .library(
-      name: "RingsPopupMenu",
-      targets: ["RingsPopupMenu"]
+      name: "PromptsFeature",
+      targets: ["PromptsFeature"]
     ),
     .library(
       name: "SettingsEditor",
@@ -82,7 +82,7 @@ let package = Package(
       name: "Application",
       dependencies: [
         "InterruptionPicker",
-        "RingsPopupMenu",
+        "PromptsFeature",
         "RingsView",
         "SettingsEditor",
         "SwiftUIKit",
@@ -117,8 +117,13 @@ let package = Package(
       ]
     ),
     .target(
-      name: "RingsPopupMenu",
-      dependencies: []
+      name: "PromptsFeature",
+      dependencies: [
+        "Ticks",
+        "Timeline",
+        "TimelineTickEffect",
+        .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+      ]
     ),
     .target(
       name: "SettingsEditor",
