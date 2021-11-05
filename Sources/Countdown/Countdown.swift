@@ -4,7 +4,6 @@ import Ticks
 public struct Countdown: Equatable, Codable {
   public var ticks: Ticks
   public var startTime: Date
-  public var endTime: Date { startTime.addingTimeInterval(Double(ticks.count)) }
 
   public init(ticks: Ticks, startTime: Date) {
     self.ticks = ticks
@@ -14,7 +13,7 @@ public struct Countdown: Equatable, Codable {
 
 public extension Countdown {
   static var zero: Countdown {
-    Countdown(ticks: 0 ... 0, startTime: Date.distantPast)
+    Countdown(ticks: 0 ... 0, startTime: .init(timeIntervalSince1970: 0))
   }
 }
 
@@ -34,15 +33,23 @@ public extension Countdown {
   }
 
   mutating func toggle(at timestamp: Date, maxTick: Tick = Tick.max - 1) {
-    isCountingDown(at: timestamp) ? stop(at: timestamp) : start(at: timestamp, maxTick: maxTick)
+    isCountingDown(at: timestamp)
+      ? stop(at: timestamp)
+      : start(at: timestamp, maxTick: maxTick)
   }
 }
 
 public extension Countdown {
-  func isCountingDown(at timestamp: Date) -> Bool {
-    let tick = tick(at: timestamp)
+  var startTick: Tick {
+    ticks.lowerBound
+  }
 
-    return isCountingDown(at: tick)
+  var stopTick: Tick {
+    ticks.upperBound
+  }
+
+  var stopTime: Date {
+    startTime.addingTimeInterval(Double(ticks.count))
   }
 
   func isCountingDown(at tick: Tick) -> Bool {
@@ -54,16 +61,14 @@ public extension Countdown {
     return true
   }
 
+  func isCountingDown(at timestamp: Date) -> Bool {
+    let tick = tick(at: timestamp)
+
+    return isCountingDown(at: tick)
+  }
+
   func tick(at timestamp: Date) -> Tick {
     ticks.clamp(Tick(timestamp.timeIntervalSince(startTime)) + ticks.lowerBound)
-  }
-
-  var startTick: Tick {
-    ticks.lowerBound
-  }
-
-  var stopTick: Tick {
-    ticks.upperBound
   }
 
   func time(at tick: Tick) -> Date {

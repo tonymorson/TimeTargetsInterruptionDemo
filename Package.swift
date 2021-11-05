@@ -49,6 +49,10 @@ let package = Package(
       targets: ["Countdown"]
     ),
     .library(
+      name: "TimelineActivity",
+      targets: ["TimelineActivity"]
+    ),
+    .library(
       name: "Durations",
       targets: ["Durations"]
     ),
@@ -116,6 +120,18 @@ let package = Package(
         "RingsView",
       ]
     ),
+    .testTarget(
+      name: "PromptsFeatureTests",
+      dependencies: [
+        "PromptsFeature",
+      ]
+    ),
+    .testTarget(
+      name: "TimelineActivityTests",
+      dependencies: [
+        "TimelineActivity",
+      ]
+    ),
     .target(
       name: "PromptsFeature",
       dependencies: [
@@ -136,6 +152,14 @@ let package = Package(
 
     // Model
 
+    .target(
+      name: "TimelineActivity",
+      dependencies: [
+        "Timeline",
+        "TimelineTickEffect",
+        .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+      ]
+    ),
     .target(
       name: "Countdown",
       dependencies: ["Ticks"]

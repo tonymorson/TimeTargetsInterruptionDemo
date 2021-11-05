@@ -3,7 +3,7 @@ import Foundation
 import Ticks
 import Timeline
 
-public func tickEffect(for timeline: Timeline, at tick: Tick, on scheduler: AnySchedulerOf<DispatchQueue>) -> Effect<DispatchQueue.SchedulerTimeType, Never> {
+public func tickEffect(for timeline: Timeline, at tick: Tick, on scheduler: AnySchedulerOf<RunLoop>) -> Effect<RunLoop.SchedulerTimeType, Never> {
   struct TimerId: Hashable {}
 
   return timeline.countdown.isCountingDown(at: tick)

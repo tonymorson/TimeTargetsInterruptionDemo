@@ -273,3 +273,27 @@ extension Ticks {
     count.seconds - 1.seconds
   }
 }
+
+extension Array where Element == Period {
+  func workProgress(at tick: Tick) -> Double {
+    guard !isEmpty else { return 0.0 }
+
+    let periodTickRanges = filter(\.isWorkPeriod)
+      .map(\.tickRange)
+
+    let totals = periodTickRanges
+      .reduce(0.0) { $0 + $1.progress(at: tick) }
+
+    return totals / Double(periodTickRanges.count)
+  }
+}
+
+extension WorkPattern {
+  func targetProgressAt(_ tick: Tick, _ dailyTarget: Int) -> Double {
+    let (currentSession, sessionID) = sessionAt(tick)
+    let sessionProgress = currentSession.workProgress(at: tick)
+    let sessionsProgress = sessionProgress + 1.0 * Double(sessionID)
+
+    return sessionsProgress * Double(numWorkPeriods) / Double(dailyTarget)
+  }
+}

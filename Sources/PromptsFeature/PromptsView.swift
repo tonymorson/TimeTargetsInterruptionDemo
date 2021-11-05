@@ -8,10 +8,10 @@ public final class PromptsView: UIButton {
   private let viewStore: ViewStore<ViewState, ViewAction>
 
   struct ViewState: Equatable {
-    let title: AttributedString
-    let subtitle: AttributedString
-    let actions: [ViewAction.TimelineAction]
-    let shouldIncludeInterruptionsInPopupMenu: Bool
+    var title: AttributedString
+    var subtitle: AttributedString
+    var actions: [ViewAction.TimelineAction]
+    var shouldIncludeInterruptionsInPopupMenu: Bool
 
     init(state: PromptsState) {
       let prompts = state.prompts
@@ -50,6 +50,8 @@ public final class PromptsView: UIButton {
 
       case resumeBreak
       case resumeWorkPeriod
+
+      case resetSchedule
     }
 
     case timeline(TimelineAction)

@@ -1899,7 +1899,7 @@ extension AppState {
     }
 
     // Return whether or not the user's preferred serious interruption timeout period has expired
-    return timeline.countdown.endTime.addingTimeInterval(pausedToInterruptionTimeout) > date
+    return timeline.countdown.stopTime.addingTimeInterval(pausedToInterruptionTimeout) > date
   }
 
   var timelineIsInterrupted: Bool {

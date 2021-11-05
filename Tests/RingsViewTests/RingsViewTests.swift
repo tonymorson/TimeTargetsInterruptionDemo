@@ -4,7 +4,7 @@ import RingsView
 import XCTest
 
 extension RingsEnvironment {
-  static var mock = RingsEnvironment.init { .distantPast }
+  static var mock = RingsEnvironment.init { .init(timeIntervalSince1970: 0) }
 }
 
 class RingsViewTests: XCTestCase {

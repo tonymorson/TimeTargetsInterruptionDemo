@@ -284,7 +284,7 @@ private extension LiveTimeline {
 
     case .fallingBehind:
 
-      var time = timeline.countdown.endTime.distance(to: Date())
+      var time = timeline.countdown.stopTime.distance(to: Date())
 
       switch time {
       case ...firstReminderTimeInterval:
@@ -370,13 +370,13 @@ private extension LiveTimeline {
       return "Ready for a long break?"
 
     case .interruptedWork:
-      return "Work interrupted at \(Self.describeTimeBriefly(timeline.countdown.endTime))."
+      return "Work interrupted at \(Self.describeTimeBriefly(timeline.countdown.stopTime))."
 
     case .interruptedShortBreak:
-      return "Break interrupted at \(Self.describeTimeBriefly(timeline.countdown.endTime))."
+      return "Break interrupted at \(Self.describeTimeBriefly(timeline.countdown.stopTime))."
 
     case .interruptedLongBreak:
-      return "Break interrupted at \(Self.describeTimeBriefly(timeline.countdown.endTime))."
+      return "Break interrupted at \(Self.describeTimeBriefly(timeline.countdown.stopTime))."
 
     case .sessionRingClosingSoon:
 //      return "\(sessionName(Date())) ring closing soon."

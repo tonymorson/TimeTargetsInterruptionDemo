@@ -35,9 +35,11 @@ public enum PromptsAction: Equatable {
 
 public struct PromptsEnv {
   var date: () -> Date
+  var mainRunLoop: AnySchedulerOf<RunLoop>
 
-  public init(date: @escaping () -> Date) {
+  public init(date: @escaping () -> Date, mainRunLoop: AnySchedulerOf<RunLoop>) {
     self.date = date
+    self.mainRunLoop = mainRunLoop
   }
 }
 
@@ -82,7 +84,7 @@ public let promptsReducer = Reducer<PromptsState, PromptsAction, PromptsEnv> { s
       break
     }
 
-    return tickEffect(for: state.timeline, at: state.tick, on: .main)
+    return tickEffect(for: state.timeline, at: state.tick, on: env.mainRunLoop)
       .map { _ in .timerTicked }
       .eraseToEffect()
 
@@ -110,16 +112,30 @@ extension PromptsState {
     // Depending on the stance, fill out the prompt fields accordingly
     switch stance {
     case .paused(.restingAtTickZero):
+      let x = timeline.numOfWorkPeriodsRemaining(at: tick)
+
       title = "Ready to start?"
-      subtitle = "You have 10 work periods remaining."
+      subtitle = "You have \(x) work periods remaining."
 
     case .paused(.restingAtStartOfWorkPeriod):
+      let x = timeline.numOfWorkPeriodsRemaining(at: tick)
+
       title = "Ready to start another work period?"
-      subtitle = "You have x work periods remaining." // FIXME:
+      subtitle = "You have \(x) work periods remaining."
 
     case .paused(.restingAtStartOfBreak):
-      title = "Ready to take a break?"
-      subtitle = "You have worked x hours with y breaks so far." // FIXME:
+      let numberOfCompletedBreaks = timeline.numBreaksCompleted(at: tick)
+      let numWorkSecondsCompleted = timeline.numOfWorkSecondsCompleted(at: tick)
+      let workCompletedPhrase = describe(numWorkSecondsCompleted.seconds)
+
+      var breaks = numberOfCompletedBreaks == 0 ? "no break" : "\(numberOfCompletedBreaks) break"
+
+      if numberOfCompletedBreaks > 1 {
+        breaks = "\(breaks)s"
+      }
+
+      title = "Ready for a break?"
+      subtitle = "You have worked \(workCompletedPhrase) with \(breaks) so far."
 
     case .paused(.reachedTarget):
       title = "Congratulations! Daily work target reached."
@@ -154,7 +170,7 @@ extension PromptsState {
       subtitle = "Next break at \(nextPeriodETADesc)."
 
     case .running(.fromStartOfBreakPeriod):
-      title = "Started Break."
+      title = "Started break."
       subtitle = "Next work period at \(nextPeriodETADesc)."
 
     case .running(.fromStartOfWorkPeriod):
@@ -192,6 +208,10 @@ extension PromptsState {
     let currentPeriod = timeline.periods.periodAt(tick)
     let isWorkTime = currentPeriod.isWorkPeriod
     let isAtStartOfPeriod = currentPeriod.firstTick == tick
+
+    if isCountingDown == false, tick == .zero {
+      return [.startSchedule]
+    }
 
     switch (isCountingDown, isWorkTime, isAtStartOfPeriod) {
     case (true, true, true):
@@ -245,6 +265,7 @@ extension PromptsView.ViewAction.TimelineAction {
     case .pauseBreak: return "Pause Break"
     case .resumeBreak: return "Resume Break"
     case .resumeWorkPeriod: return "Resume Work Period"
+    case .resetSchedule: return "Reset Schedule..."
     }
   }
 
@@ -261,6 +282,7 @@ extension PromptsView.ViewAction.TimelineAction {
     case .pauseBreak: return "pause"
     case .resumeBreak: return "arrow.right"
     case .resumeWorkPeriod: return "arrow.right"
+    case .resetSchedule: return "arrow.uturn.left"
     }
   }
 }
@@ -293,6 +315,9 @@ extension PromptsAction {
       self = .timeline(.restartCurrentPeriod)
     case .timeline(.restartWorkPeriod):
       self = .timeline(.restartCurrentPeriod)
+
+    case .timeline(.resetSchedule):
+      self = .timeline(.resetTimelineToTickZero)
 
     case .interruptionTapped(let interruption):
       self = .interruptionTapped(interruption)
@@ -422,4 +447,71 @@ extension Timeline {
       ? .running(.bodyOfWorkPeriod)
       : .running(.bodyOfBreakPeriod)
   }
+}
+
+extension Timeline {
+  func numOfBreaks(at tick: Tick) -> Int {
+    periods.periods(from: 0, to: tick).indexOfPeriodAt(tick) / 2
+  }
+
+  func numOfWorkPeriodsRemaining(at tick: Tick) -> Int {
+    dailyTarget - numOfBreaks(at: tick)
+  }
+
+  func numWorkPeriodsCompleted(at tick: Tick) -> Int {
+    let (quotient, remainder) = periods.periods(from: 0, to: tick).indexOfPeriodAt(tick).quotientAndRemainder(dividingBy: 2)
+
+    return quotient + (remainder > 0 ? 1 : 0)
+  }
+
+  func numBreaksCompleted(at tick: Tick) -> Int {
+    periods.periods(from: 0, to: tick).indexOfPeriodAt(tick) / 2
+  }
+
+  func numOfWorkSecondsCompleted(at tick: Tick) -> Int {
+    let currentPeriod = periods.periodAt(tick)
+    let additional = currentPeriod.isWorkPeriod
+      ? currentPeriod.firstTick
+      : 0
+
+    return Int(periods.work.asSeconds) * numWorkPeriodsCompleted(at: tick) + additional
+  }
+}
+
+private var durationFormatter: DateComponentsFormatter {
+  let formatter = DateComponentsFormatter()
+  formatter.unitsStyle = .full
+  formatter.allowedUnits = [.hour, .minute, .second]
+  formatter.zeroFormattingBehavior = .dropAll
+  //    formatter.includesApproximationPhrase = duration > 1.hours
+
+  return formatter
+}
+
+private extension Measurement where UnitType == UnitDuration {
+  var asTimeInterval: TimeInterval {
+    converted(to: .seconds).value
+  }
+}
+
+private func describeApproximately(_ duration: Measurement<UnitDuration>) -> String {
+  durationFormatter.includesApproximationPhrase = duration > 1.hours
+
+  if duration <= 1.hours {
+    return durationFormatter.string(from: duration.asTimeInterval) ?? ""
+  }
+
+  let remainingSeconds = duration.asSeconds.remainder(dividingBy: 1.hours.asTimeInterval)
+
+  if remainingSeconds == 0 { return describe(duration) }
+
+  if remainingSeconds < (30 * 60) {
+    return durationFormatter.string(from: duration.asTimeInterval - Double(remainingSeconds)) ?? ""
+  }
+
+  return durationFormatter.string(from: duration.asTimeInterval + Double(remainingSeconds)) ?? ""
+}
+
+private func describe(_ duration: Measurement<UnitDuration>) -> String {
+  durationFormatter.string(from: duration.asTimeInterval) ?? ""
 }
