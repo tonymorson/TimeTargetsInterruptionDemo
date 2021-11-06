@@ -4,6 +4,11 @@ import Ticks
 import Timeline
 import TimelineTickEffect
 
+// TODO:
+// Test interruptions at different phases
+// Test resumptions show its message for 5 seconds despite what phase they start
+// Have this module depend on a TimlineHistory(name tbd) module type
+
 public struct PromptsState: Equatable {
   var tick: Tick
   var timeline: Timeline
@@ -33,72 +38,81 @@ public enum PromptsAction: Equatable {
   case timerTicked
 }
 
-public struct PromptsEnv {
+public struct PromptsEnvironment {
   var date: () -> Date
-  var mainRunLoop: AnySchedulerOf<RunLoop>
+  var scheduler: AnySchedulerOf<RunLoop>
 
-  public init(date: @escaping () -> Date, mainRunLoop: AnySchedulerOf<RunLoop>) {
+  public init(date: @escaping () -> Date, scheduler: AnySchedulerOf<RunLoop>) {
     self.date = date
-    self.mainRunLoop = mainRunLoop
+    self.scheduler = scheduler
   }
 }
 
-public let promptsReducer = Reducer<PromptsState, PromptsAction, PromptsEnv> { state, action, env in
-  switch action {
-  case .timeline(let action):
-
-    state.interruption = nil
-
+public let promptsReducer: Reducer<PromptsState,
+  PromptsAction,
+  PromptsEnvironment>
+  = Reducer { state, action, env in
     switch action {
-    case .pause:
-      var timeline = state.timeline
-      timeline.pauseCountdown(at: env.date)
-      state.timeline = timeline
+    case .timeline(let action):
+
+      state.interruption = nil
+
+      switch action {
+      case .pause:
+        var timeline = state.timeline
+        timeline.pauseCountdown(at: env.date)
+        state.timeline = timeline
+        state.tick = state.timeline.countdown.tick(at: env.date())
+
+      case .restartCurrentPeriod:
+        var timeline = state.timeline
+        timeline.startCountdownAtStartOfCurrentPeriod(at: env.date)
+        state.timeline = timeline
+        state.tick = state.timeline.countdown.tick(at: env.date())
+
+      case .resetTimelineToTickZero:
+        var timeline = state.timeline
+        timeline.pauseCountdown(at: env.date)
+        state.timeline = timeline
+        state.tick = .zero
+
+      case .resume:
+        // FIXME: Use a countdown dependency and use that reducer
+        let tick = state.timeline.countdown.tick(at: env.date())
+        if state.timeline.countdown.isCountingDown(at: tick) {
+          return .none
+        }
+
+        var timeline = state.timeline
+        timeline.resumeCountdown(from: env.date)
+        state.timeline = timeline
+        state.tick = state.timeline.countdown.tick(at: env.date())
+
+      case .skipCurrentPeriod:
+        var timeline = state.timeline
+        timeline.stopCountdownAtStartOfNextPeriod(at: env.date)
+        state.timeline = timeline
+        state.tick = state.timeline.countdown.tick(at: env.date())
+
+      case .changedTimeline:
+        break
+      }
+
+      return tickEffect(for: state.timeline, at: state.tick, on: env.scheduler)
+        .map { _ in .timerTicked }
+        .eraseToEffect()
+
+    case .timerTicked:
       state.tick = state.timeline.countdown.tick(at: env.date())
 
-    case .restartCurrentPeriod:
-      var timeline = state.timeline
-      timeline.moveCountdownToStartOfCurrentPeriod(at: env.date)
-      state.timeline = timeline
-      state.tick = state.timeline.countdown.tick(at: env.date())
+      return .none
 
-    case .resetTimelineToTickZero:
-      var timeline = state.timeline
-      timeline.pauseCountdown(at: env.date)
-      state.timeline = timeline
-      state.tick = .zero
+    case .interruptionTapped(let interruption):
+      state.interruption = interruption
 
-    case .resume:
-      var timeline = state.timeline
-      timeline.resumeCountdown(from: env.date)
-      state.timeline = timeline
-      state.tick = state.timeline.countdown.tick(at: env.date())
-
-    case .skipCurrentPeriod:
-      var timeline = state.timeline
-      timeline.moveCountdownToStartOfNextPeriod(at: env.date)
-      state.timeline = timeline
-      state.tick = state.timeline.countdown.tick(at: env.date())
-
-    case .changedTimeline:
-      break
+      return .none
     }
-
-    return tickEffect(for: state.timeline, at: state.tick, on: env.mainRunLoop)
-      .map { _ in .timerTicked }
-      .eraseToEffect()
-
-  case .timerTicked:
-    state.tick = state.timeline.countdown.tick(at: env.date())
-
-    return .none
-
-  case .interruptionTapped(let interruption):
-    state.interruption = interruption
-
-    return .none
   }
-}
 
 extension PromptsState {
   var prompts: (String, String) {
@@ -128,7 +142,9 @@ extension PromptsState {
       let numWorkSecondsCompleted = timeline.numOfWorkSecondsCompleted(at: tick)
       let workCompletedPhrase = describe(numWorkSecondsCompleted.seconds)
 
-      var breaks = numberOfCompletedBreaks == 0 ? "no break" : "\(numberOfCompletedBreaks) break"
+      var breaks = numberOfCompletedBreaks == 0
+        ? "no break"
+        : "\(numberOfCompletedBreaks) break"
 
       if numberOfCompletedBreaks > 1 {
         breaks = "\(breaks)s"
@@ -194,7 +210,8 @@ extension PromptsState {
 extension PromptsState {
   var interruptionDescription: String {
     let interruptionTime = timeline.countdown.time(at: tick)
-    let timeDescription = interruptionTime.formatted(date: .omitted, time: .shortened)
+    let timeDescription = interruptionTime.formatted(date: .omitted,
+                                                     time: .shortened)
 
     guard let interruption = interruption else {
       return "Countdown paused at \(timeDescription)."
@@ -459,7 +476,9 @@ extension Timeline {
   }
 
   func numWorkPeriodsCompleted(at tick: Tick) -> Int {
-    let (quotient, remainder) = periods.periods(from: 0, to: tick).indexOfPeriodAt(tick).quotientAndRemainder(dividingBy: 2)
+    let (quotient, remainder) = periods.periods(from: 0,
+                                                to: tick)
+      .indexOfPeriodAt(tick).quotientAndRemainder(dividingBy: 2)
 
     return quotient + (remainder > 0 ? 1 : 0)
   }
