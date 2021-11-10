@@ -138,4 +138,3 @@ public extension Array where Element == Period {
     return totals / Double(periodTickRanges.count)
   }
 }
-
