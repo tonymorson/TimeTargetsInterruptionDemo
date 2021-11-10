@@ -20,46 +20,46 @@ class UninterruptedPromptsFeatureTests: XCTestCase {
 
     mainRunLoop.advance(by: .seconds(25))
 
-    viewStore.receive(.timerTicked) {
+    viewStore.receive(.timeline(.timerTicked)) {
       $0.actions = [.pauseWorkPeriod, .skipToNextBreak, .restartWorkPeriod]
     }
 
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
 
-    viewStore.receive(.timerTicked) {
+    viewStore.receive(.timeline(.timerTicked)) {
       $0.title = annotated(title: " ")
     }
 
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
 
-    viewStore.receive(.timerTicked) {
+    viewStore.receive(.timeline(.timerTicked)) {
       $0.title = annotated(title: "Prepare to wind down work period soon.")
     }
 
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
 
-    viewStore.receive(.timerTicked) {
+    viewStore.receive(.timeline(.timerTicked)) {
       $0.title = annotated(title: " ")
     }
 
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
 
     viewStore.stopTimer()
   }
@@ -75,18 +75,18 @@ class UninterruptedPromptsFeatureTests: XCTestCase {
 
     mainRunLoop.advance(by: .seconds(5))
 
-    viewStore.receive(.timerTicked) {
+    viewStore.receive(.timeline(.timerTicked)) {
       $0.actions = [.pauseBreak, .skipToNextWorkPeriod, .restartBreak]
     }
 
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
 
-    viewStore.receive(.timerTicked) {
+    viewStore.receive(.timeline(.timerTicked)) {
       $0.title = annotated(title: " ")
     }
 
-    viewStore.receive(.timerTicked)
+    viewStore.receive(.timeline(.timerTicked))
 
     viewStore.stopTimer()
   }
@@ -102,43 +102,43 @@ class UninterruptedPromptsFeatureTests: XCTestCase {
 
     mainRunLoop.advance(by: .seconds(25))
 
-    viewStore.receive(.timerTicked) { $0.actions = [.pauseWorkPeriod, .skipToNextBreak, .restartWorkPeriod] }
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
+    viewStore.receive(.timeline(.timerTicked)) { $0.actions = [.pauseWorkPeriod, .skipToNextBreak, .restartWorkPeriod] }
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
 
-    viewStore.receive(.timerTicked) {
+    viewStore.receive(.timeline(.timerTicked)) {
       $0.title = annotated(title: " ")
     }
 
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
 
-    viewStore.receive(.timerTicked) {
+    viewStore.receive(.timeline(.timerTicked)) {
       $0.title = annotated(title: "Prepare to wind down work period soon.")
     }
 
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
 
-    viewStore.receive(.timerTicked) {
+    viewStore.receive(.timeline(.timerTicked)) {
       $0.title = annotated(title: " ")
     }
 
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
 
     viewStore.stopTimer()
   }
@@ -154,11 +154,11 @@ class UninterruptedPromptsFeatureTests: XCTestCase {
 
     mainRunLoop.advance(by: .seconds(5))
 
-    viewStore.receive(.timerTicked) { $0.actions = [.pauseBreak, .skipToNextWorkPeriod, .restartBreak] }
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked)
-    viewStore.receive(.timerTicked) { $0.title = annotated(title: " ") }
-    viewStore.receive(.timerTicked)
+    viewStore.receive(.timeline(.timerTicked)) { $0.actions = [.pauseBreak, .skipToNextWorkPeriod, .restartBreak] }
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked))
+    viewStore.receive(.timeline(.timerTicked)) { $0.title = annotated(title: " ") }
+    viewStore.receive(.timeline(.timerTicked))
 
     viewStore.stopTimer()
   }
@@ -171,7 +171,10 @@ class UninterruptedPromptsFeatureTests: XCTestCase {
     let period = initialState.timeline.periods.periodAtIdx(nth)
 
     // Modify the initial state to paused it at the first tick of the nth period.
-    initialState.timeline.countdown.ticks = period.firstTick ... period.firstTick
+    var aTimeline = initialState.timeline
+    aTimeline.countdown.ticks = period.firstTick ... period.firstTick
+    initialState.userActivity.history = [aTimeline]
+    initialState.userActivity.tick = period.firstTick
 
     // Make an offset so our schedule emits the right time during tests.
     let offset = Double(period.firstTick)
@@ -336,7 +339,10 @@ class FirstPeriodTicks: XCTestCase {
     let period = initialState.timeline.periods.periodAtIdx(nth)
 
     // Modify the initial state to paused it at the first tick of the nth period.
-    initialState.timeline.countdown.ticks = period.firstTick ... period.firstTick
+    var aTimeline = initialState.timeline
+    aTimeline.countdown.ticks = period.firstTick ... period.firstTick
+    initialState.userActivity.history = [aTimeline]
+    initialState.userActivity.tick = period.firstTick
 
     // Make an offset so our schedule emits the right time during tests.
     let offset = Double(period.firstTick)
@@ -405,13 +411,13 @@ class IdempotencyTests: XCTestCase {
 
     mainRunLoop.advance(by: .seconds(3))
 
-    viewStore.receive(.timerTicked) {
+    viewStore.receive(.timeline(.timerTicked)) {
       $0.actions = [.pauseWorkPeriod, .skipToNextBreak, .restartWorkPeriod]
     }
 
-    viewStore.receive(.timerTicked) {
+    viewStore.receive(.timeline(.timerTicked)) {
       $0.actions = [.pauseWorkPeriod, .skipToNextBreak, .restartWorkPeriod]
-      viewStore.receive(.timerTicked) {
+      viewStore.receive(.timeline(.timerTicked)) {
         $0.actions = [.pauseWorkPeriod, .skipToNextBreak, .restartWorkPeriod]
       }
     }
@@ -430,7 +436,10 @@ class IdempotencyTests: XCTestCase {
     let period = initialState.timeline.periods.periodAtIdx(nth)
 
     // Modify the initial state to paused it at the first tick of the nth period.
-    initialState.timeline.countdown.ticks = period.firstTick ... period.firstTick
+    var aTimeline = initialState.timeline
+    aTimeline.countdown.ticks = period.firstTick ... period.firstTick
+    initialState.userActivity.history = [aTimeline]
+    initialState.userActivity.tick = period.firstTick
 
     // Make an offset so our schedule emits the right time during tests.
     let offset = Double(period.firstTick)

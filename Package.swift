@@ -49,8 +49,8 @@ let package = Package(
       targets: ["Countdown"]
     ),
     .library(
-      name: "TimelineActivity",
-      targets: ["TimelineActivity"]
+      name: "UserActivity",
+      targets: ["UserActivity"]
     ),
     .library(
       name: "Durations",
@@ -127,9 +127,9 @@ let package = Package(
       ]
     ),
     .testTarget(
-      name: "TimelineActivityTests",
+      name: "UserActivityTests",
       dependencies: [
-        "TimelineActivity",
+        "UserActivity",
       ]
     ),
     .target(
@@ -138,6 +138,7 @@ let package = Package(
         "Ticks",
         "Timeline",
         "TimelineTickEffect",
+        "UserActivity",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ]
     ),
@@ -153,7 +154,7 @@ let package = Package(
     // Model
 
     .target(
-      name: "TimelineActivity",
+      name: "UserActivity",
       dependencies: [
         "Timeline",
         "TimelineTickEffect",

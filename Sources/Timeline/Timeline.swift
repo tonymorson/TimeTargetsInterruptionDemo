@@ -25,30 +25,22 @@ public struct Timeline: Equatable, Codable {
     self.stopOnBreak = stopOnBreak
     self.stopOnWork = stopOnWork
   }
+}
 
-  public func period(at date: () -> Date) -> Period {
-    let tick = countdown.tick(at: date())
-    return periods.periodAt(tick)
-  }
-
-  public func nextPeriod(at date: () -> Date) -> Period {
-    let tick = period(at: date).tickRange.upperBound + 1
-    return periods.periodAt(tick)
-  }
-
-  public mutating func resumeCountdown(from date: () -> Date) {
+public extension Timeline {
+  mutating func resumeCountdown(from date: () -> Date) {
     countdown.start(at: date(), maxTick: nextStopTick(at: date))
   }
 
-  public mutating func pauseCountdown(at date: () -> Date) {
+  mutating func pauseCountdown(at date: () -> Date) {
     countdown.stop(at: date())
   }
 
-  public mutating func toggleCountdown(at date: () -> Date) {
+  mutating func toggleCountdown(at date: () -> Date) {
     countdown.toggle(at: date(), maxTick: nextStopTick(at: date))
   }
 
-  public mutating func moveCountdownToStartOfCurrentPeriod(at date: () -> Date) {
+  mutating func startCountdownAtStartOfCurrentPeriod(at date: () -> Date) {
     let currentPeriod = period(at: date)
     let lowerTickBound = currentPeriod.tickRange.lowerBound
     let upperTickBound = nextStopTick(after: currentPeriod.firstTick, at: date)
@@ -57,7 +49,7 @@ public struct Timeline: Equatable, Codable {
     countdown.startTime = date()
   }
 
-  public mutating func moveCountdownToStartOfNextPeriod(at date: () -> Date) {
+  mutating func startCountdownAtStartOfNextPeriod(at date: () -> Date) {
     let nextPeriod = nextPeriod(at: date)
     let lowerTickBound = nextPeriod.tickRange.lowerBound
     let upperTickBound = nextStopTick(after: nextPeriod.firstTick, at: date)
@@ -66,12 +58,30 @@ public struct Timeline: Equatable, Codable {
     countdown.startTime = date()
   }
 
-  public mutating func resetCountdownToTickZero(date: () -> Date) {
-    countdown.ticks = 0 ... 0
+  mutating func stopCountdownAtStartOfCurrentPeriod(at date: () -> Date) {
+    let currentPeriod = period(at: date)
+    let lowerTickBound = currentPeriod.tickRange.lowerBound
+
+    countdown.ticks = lowerTickBound ... lowerTickBound
     countdown.startTime = date()
   }
 
-  public func nextStopTick(at date: () -> Date) -> Tick {
+  mutating func stopCountdownAtStartOfNextPeriod(at date: () -> Date) {
+    let nextPeriod = nextPeriod(at: date)
+    let lowerTickBound = nextPeriod.tickRange.lowerBound
+
+    countdown.ticks = lowerTickBound ... lowerTickBound
+    countdown.startTime = date()
+  }
+
+  mutating func resetCountdownToTickZero(date: () -> Date) {
+    countdown.ticks = 0 ... 0
+    countdown.startTime = date()
+  }
+}
+
+extension Timeline {
+  func nextStopTick(at date: () -> Date) -> Tick {
     let currentTick = countdown.tick(at: date())
     let nextStopTick = periods.nextStopTickAfter(tick: currentTick,
                                                  stoppingAtNearestBreak: stopOnBreak,
@@ -82,7 +92,7 @@ public struct Timeline: Equatable, Codable {
     return nextStopTick >= nextTargetTick ? nextTargetTick : nextStopTick
   }
 
-  public func nextStopTick(after tick: Tick, at _: () -> Date) -> Tick {
+  func nextStopTick(after tick: Tick, at _: () -> Date) -> Tick {
     let nextStopTick = periods.nextStopTickAfter(tick: tick,
                                                  stoppingAtNearestBreak: stopOnBreak,
                                                  stoppingAtNearestWorkPeriod: stopOnWork)
@@ -90,8 +100,28 @@ public struct Timeline: Equatable, Codable {
     return nextStopTick
   }
 
+  func period(at date: () -> Date) -> Period {
+    let tick = countdown.tick(at: date())
+    return periods.periodAt(tick)
+  }
+
+  func nextPeriod(at date: () -> Date) -> Period {
+    let tick = period(at: date).tickRange.upperBound + 1
+    return periods.periodAt(tick)
+  }
+
   func nextTargetTickAfter(tick: Tick, at _: () -> Date) -> Tick {
     periods.targetTick(at: tick, workPeriodsPerDay: dailyTarget) + 1
+  }
+}
+
+public extension WorkPattern {
+  func targetProgressAt(_ tick: Tick, _ dailyTarget: Int) -> Double {
+    let (currentSession, sessionID) = sessionAt(tick)
+    let sessionProgress = currentSession.workProgress(at: tick)
+    let sessionsProgress = sessionProgress + 1.0 * Double(sessionID)
+
+    return sessionsProgress * Double(numWorkPeriods) / Double(dailyTarget)
   }
 }
 
@@ -109,12 +139,3 @@ public extension Array where Element == Period {
   }
 }
 
-public extension WorkPattern {
-  func targetProgressAt(_ tick: Tick, _ dailyTarget: Int) -> Double {
-    let (currentSession, sessionID) = sessionAt(tick)
-    let sessionProgress = currentSession.workProgress(at: tick)
-    let sessionsProgress = sessionProgress + 1.0 * Double(sessionID)
-
-    return sessionsProgress * Double(numWorkPeriods) / Double(dailyTarget)
-  }
-}
