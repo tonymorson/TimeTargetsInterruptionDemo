@@ -8,7 +8,7 @@ import UserActivity
 // TODO:
 // Test interruptions at different phases
 // Test resumptions show its message for 5 seconds despite what phase they start
-// Have this module depend on a TimlineHistory(name tbd) module type
+// Add interruption tests
 
 public struct PromptsState: Equatable {
   public var userActivity: UserActivityState
@@ -60,77 +60,22 @@ public struct PromptsEnvironment {
   }
 }
 
-public let promptsReducer: Reducer<PromptsState,
+public let promptsReducer = Reducer<PromptsState,
   PromptsAction,
-  PromptsEnvironment>
-  = Reducer { state, action, env in
+  PromptsEnvironment>.combine(
+  UserActivityReducer.pullback(state: \.userActivity, action: /PromptsAction.timeline, environment: { UserActivityEnvironment(date: $0.date, scheduler: $0.scheduler) }),
+
+  Reducer<PromptsState, PromptsAction, PromptsEnvironment> { state, action, _ in
     switch action {
-    case .timeline(let action):
-
-      state.interruption = nil
-
-      return UserActivityReducer.run(&state.userActivity,
-                                     action,
-                                     .init(date: env.date,
-                                           scheduler: env.scheduler))
-        .map(PromptsAction.timeline)
-
-//      switch action {
-//      case .pause:
-//        var timeline = state.timeline
-//        timeline.pauseCountdown(at: env.date)
-//        state.timeline = timeline
-//        state.tick = state.timeline.countdown.tick(at: env.date())
-//
-//      case .restartCurrentPeriod:
-//        var timeline = state.timeline
-//        timeline.startCountdownAtStartOfCurrentPeriod(at: env.date)
-//        state.timeline = timeline
-//        state.tick = state.timeline.countdown.tick(at: env.date())
-//
-//      case .resetTimelineToTickZero:
-//        var timeline = state.timeline
-//        timeline.pauseCountdown(at: env.date)
-//        state.timeline = timeline
-//        state.tick = .zero
-//
-//      case .resume:
-//        // FIXME: Use a countdown dependency and use that reducer
-//        let tick = state.timeline.countdown.tick(at: env.date())
-//        if state.timeline.countdown.isCountingDown(at: tick) {
-//          return .none
-//        }
-//
-//        var timeline = state.timeline
-//        timeline.resumeCountdown(from: env.date)
-//        state.timeline = timeline
-//        state.tick = state.timeline.countdown.tick(at: env.date())
-//
-//      case .skipCurrentPeriod:
-//        var timeline = state.timeline
-//        timeline.stopCountdownAtStartOfNextPeriod(at: env.date)
-//        state.timeline = timeline
-//        state.tick = state.timeline.countdown.tick(at: env.date())
-//
-//      case .changedTimeline:
-//        break
-//      }
-
-//      return tickEffect(for: state.timeline, at: state.tick, on: env.scheduler)
-//        .map { _ in .timerTicked }
-//        .eraseToEffect()
-
-//    case .timerTicked:
-////      state.tick = state.timeline.countdown.tick(at: env.date())
-//
-//      return .none
-
     case .interruptionTapped(let interruption):
       state.interruption = interruption
+      return .none
 
+    default:
       return .none
     }
   }
+)
 
 extension PromptsState {
   var prompts: (String, String) {
