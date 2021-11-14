@@ -5,6 +5,7 @@ import Foundation
 import PromptsFeature
 import RingsView
 import SwiftUIKit
+import TabBarFeature
 import Ticks
 import Timeline
 import TimelineReports
@@ -46,6 +47,29 @@ struct AppState: Equatable {
 
   var timeline: Timeline {
     user.history.last ?? .init()
+  }
+
+  var tabBar: TabBarState {
+    get {
+      let tab: TabBarItem
+      switch selectedTab {
+      case .tasks: tab = .tasks
+      case .charts: tab = .charts
+      case .today: tab = .today
+      }
+
+      return .init(selectedTab: tab)
+    }
+    set {
+      switch newValue.selectedTab {
+      case .today:
+        selectedTab = .today
+      case .tasks:
+        selectedTab = .tasks
+      case .charts:
+        selectedTab = .charts
+      }
+    }
   }
 
   var toolbar: ButtonsBarState {
@@ -90,6 +114,7 @@ struct AppState: Equatable {
 enum AppAction {
   case prompts(PromptsAction)
   case rings(RingsViewAction)
+  case tabBar(TabBarAction)
   case toolbar(ButtonsBarAction)
 }
 
@@ -103,7 +128,9 @@ let appReducer: Reducer<AppState, AppAction, AppEnvironment> = Reducer.combine(
 
   promptsReducer.pullback(state: \.prompts, action: /AppAction.prompts, environment: { PromptsEnvironment(date: $0.date, scheduler: $0.scheduler) }),
 
-  buttonsBarReducer.pullback(state: \.toolbar, action: /AppAction.toolbar, environment: { _ in () })
+  buttonsBarReducer.pullback(state: \.toolbar, action: /AppAction.toolbar, environment: { _ in () }),
+
+  tabbarReducer.pullback(state: \.tabBar, action: /AppAction.tabBar, environment: { _ in () })
 )
 
 @MainActor
@@ -150,17 +177,78 @@ public class AppViewController: UIViewController {
 
     view.host(promptsView) { v, p in
       v.leadingAnchor.constraint(equalTo: p.safeAreaLayoutGuide.leadingAnchor)
-      v.bottomAnchor.constraint(equalTo: p.safeAreaLayoutGuide.bottomAnchor)
-
-      v.topAnchor.constraint(equalTo: ringsView.safeAreaLayoutGuide.bottomAnchor)
       v.trailingAnchor.constraint(equalTo: p.safeAreaLayoutGuide.trailingAnchor)
+
+//      v.topAnchor.constraint(equalTo: ringsView.safeAreaLayoutGuide.bottomAnchor)
+//      v.bottomAnchor.constraint(equalTo: p.safeAreaLayoutGuide.bottomAnchor)
     }
 
-    viewStore.publisher.map(\.isShowingBottomToolbar).sink { isShowingTabs in
-      promptsView.isHidden = isShowingTabs
+    promptVerticalTopConstraint = promptsView.topAnchor.constraint(equalTo: ringsView.safeAreaLayoutGuide.bottomAnchor)
+    promptVerticalBottomConstraint = promptsView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+
+    promptVerticalTopConstraint.isActive = true
+    promptVerticalBottomConstraint.isActive = true
+
+    let tabBar = TabBarView(store: store.scope(state: \.tabBar, action: AppAction.tabBar))
+
+    view.host(tabBar) { v, p in
+      v.leadingAnchor.constraint(equalTo: p.leadingAnchor)
+      v.trailingAnchor.constraint(equalTo: p.trailingAnchor)
+
+//      v.bottomAnchor.constraint(equalTo: p.safeAreaLayoutGuide.bottomAnchor)
     }
-    .store(in: &cancellables)
+
+    tabBarVerticalConstraint = tabBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: 0)
+
+    tabBarVerticalConstraint.isActive = true
+
+    viewStore.publisher
+      .map(\.isShowingBottomToolbar)
+      .removeDuplicates()
+      .dropFirst()
+      .sink { isShowingTabs in
+        self.view.setNeedsLayout()
+        UIView.animate(withDuration: 0.45, delay: 0.0, usingSpringWithDamping: 0.75, initialSpringVelocity: 0.5, options: .curveEaseInOut) {
+          promptsView.alpha = isShowingTabs ? 0.0 : 1.0
+          self.view.layoutIfNeeded()
+        }
+      }
+      .store(in: &cancellables)
+  }
+
+  override public func viewWillLayoutSubviews() {
+    super.viewWillLayoutSubviews()
+
+    var constant: CGFloat = viewStore.isShowingBottomToolbar ? 0 : 250
+    if traitCollection.verticalSizeClass == .compact {
+      constant = 250
+    }
+
+    tabBarVerticalConstraint.constant = constant
+
+    if viewStore.isShowingBottomToolbar {
+      promptVerticalTopConstraint.constant = 250
+      promptVerticalBottomConstraint.constant = 250
+    } else {
+      promptVerticalTopConstraint.constant = 0
+      promptVerticalBottomConstraint.constant = 0
+    }
+  }
+
+  override public func willTransition(to newCollection: UITraitCollection, with coordinator: UIViewControllerTransitionCoordinator) {
+    super.willTransition(to: newCollection, with: coordinator)
+
+    view.setNeedsLayout()
+
+    coordinator.animate(alongsideTransition: { [unowned self] _ in
+      self.view.layoutIfNeeded()
+    }) { [unowned self] _ in
+      self.view.layoutIfNeeded()
+    }
   }
 
   private var cancellables: Set<AnyCancellable> = []
+  private var tabBarVerticalConstraint: NSLayoutConstraint!
+  private var promptVerticalTopConstraint: NSLayoutConstraint!
+  private var promptVerticalBottomConstraint: NSLayoutConstraint!
 }

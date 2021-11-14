@@ -15,6 +15,10 @@ let package = Package(
       targets: ["Application"]
     ),
     .library(
+      name: "TabBarFeature",
+      targets: ["TabBarFeature"]
+    ),
+    .library(
       name: "InterruptionPicker",
       targets: ["InterruptionPicker"]
     ),
@@ -94,9 +98,16 @@ let package = Package(
         "RingsView",
         "SettingsEditor",
         "SwiftUIKit",
+        "TabBarFeature",
         "Timeline",
         "TimelineReports",
         "ButtonsBarFeature",
+        .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+      ]
+    ),
+    .target(
+      name: "TabBarFeature",
+      dependencies: [
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ]
     ),
