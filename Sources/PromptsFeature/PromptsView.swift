@@ -159,7 +159,7 @@ public final class PromptsView: UIButton {
       .receive(on: DispatchQueue.main)
       .sink { [weak self] menuItems in
         guard let self = self else { return }
-        self.menu = UIMenu(children: menuItems)
+        self.menu = UIMenu(children: menuItems.reversed())
       }
       .store(in: &cancellables)
   }
