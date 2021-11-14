@@ -5,16 +5,24 @@ import XCTest
 
 @testable import PromptsFeature
 
+public extension RunLoop {
+  /// A test scheduler of run loops.
+  static var testLoopAdjustingForTimezoneDependency: TestSchedulerOf<RunLoop> {
+    let offset = TimeZone.current.secondsFromGMT()
+    return .init(now: .init(.init(timeIntervalSince1970: TimeInterval(-offset))))
+  }
+}
+
 class UninterruptedPromptsFeatureTests: XCTestCase {
   // Create a test scheduler.
-  let mainRunLoop = RunLoop.test
+  let mainRunLoop = RunLoop.testLoopAdjustingForTimezoneDependency
 
   func testFirstWorkPeriod() {
     let viewStore = viewStorePausedAtStartOfPeriod(nth: 0)
 
     viewStore.send(.timeline(.startSchedule)) {
       $0.title = annotated(title: "Started work period.")
-      $0.subtitle = annotated(subtitle: "Next break at 1:00 AM.")
+      $0.subtitle = annotated(subtitle: "Next break at 12:00 AM.")
       $0.actions = [.pauseWorkPeriod, .skipToNextBreak]
     }
 
@@ -69,7 +77,7 @@ class UninterruptedPromptsFeatureTests: XCTestCase {
 
     viewStore.send(.timeline(.startBreak)) {
       $0.title = annotated(title: "Started break.")
-      $0.subtitle = annotated(subtitle: "Next work period at 1:00 AM.")
+      $0.subtitle = annotated(subtitle: "Next work period at 12:00 AM.")
       $0.actions = [.pauseBreak, .skipToNextWorkPeriod]
     }
 
@@ -96,7 +104,7 @@ class UninterruptedPromptsFeatureTests: XCTestCase {
 
     viewStore.send(.timeline(.startWorkPeriod)) {
       $0.title = annotated(title: "Started work period.")
-      $0.subtitle = annotated(subtitle: "Next break at 1:02 AM.")
+      $0.subtitle = annotated(subtitle: "Next break at 12:02 AM.")
       $0.actions = [.pauseWorkPeriod, .skipToNextBreak]
     }
 
@@ -148,7 +156,7 @@ class UninterruptedPromptsFeatureTests: XCTestCase {
 
     viewStore.send(.timeline(.startBreak)) {
       $0.title = annotated(title: "Started break.")
-      $0.subtitle = annotated(subtitle: "Next work period at 1:02 AM.")
+      $0.subtitle = annotated(subtitle: "Next work period at 12:02 AM.")
       $0.actions = [.pauseBreak, .skipToNextWorkPeriod]
     }
 
@@ -364,7 +372,7 @@ class FirstPeriodTicks: XCTestCase {
 
 class IdempotencyTests: XCTestCase {
   // Create a test scheduler.
-  let mainRunLoop = RunLoop.test
+  let mainRunLoop = RunLoop.testLoopAdjustingForTimezoneDependency
 
   func testPauseIsIdempotent() {
     let viewStore = viewStorePausedAtStartOfPeriod(nth: 0)
@@ -387,7 +395,7 @@ class IdempotencyTests: XCTestCase {
 
     viewStore.send(.timeline(.startSchedule)) {
       $0.title = annotated(title: "Started work period.")
-      $0.subtitle = annotated(subtitle: "Next break at 1:00 AM.")
+      $0.subtitle = annotated(subtitle: "Next break at 12:00 AM.")
       $0.actions = [.pauseWorkPeriod, .skipToNextBreak]
     }
 
@@ -405,7 +413,7 @@ class IdempotencyTests: XCTestCase {
 
     viewStore.send(.timeline(.startSchedule)) {
       $0.title = annotated(title: "Started work period.")
-      $0.subtitle = annotated(subtitle: "Next break at 1:00 AM.")
+      $0.subtitle = annotated(subtitle: "Next break at 12:00 AM.")
       $0.actions = [.pauseWorkPeriod, .skipToNextBreak]
     }
 
