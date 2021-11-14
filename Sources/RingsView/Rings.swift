@@ -12,48 +12,82 @@ public struct RingsViewState: Equatable {
 
   public init() {
     content = ContentState(tick: .zero, timeline: .init())
-    layout = LayoutState(portrait: LayoutState.ConcentricityState(concentricity: 0.0,
-                                                                  scaleFactorWhenFullyAcentric: 1.0,
-                                                                  scaleFactorWhenFullyConcentric: 1.0,
-                                                                  spreadOut: .vertical),
+    layout = LayoutState(portrait: .init(concentricity: 0.0,
+                                         scaleFactorAcentric: 1.0,
+                                         scaleFactorConcentric: 1.0,
+                                         acentricSpread: .vertical),
 
-                         landscape: LayoutState.ConcentricityState(concentricity: 1.0,
-                                                                   scaleFactorWhenFullyAcentric: 1.0,
-                                                                   scaleFactorWhenFullyConcentric: 1.0,
-                                                                   spreadOut: .horizontal))
+                         landscape: .init(concentricity: 1.0,
+                                          scaleFactorAcentric: 1.0,
+                                          scaleFactorConcentric: 1.0,
+                                          acentricSpread: .horizontal))
     prominentRing = .period
+  }
+
+  public init(content: ContentState,
+              layout: LayoutState,
+              prominentRing: RingIdentifier)
+  {
+    self.content = content
+    self.layout = layout
+
+    self.prominentRing = prominentRing
   }
 
   public struct ContentState: Equatable {
     public var tick: Tick
     public var timeline: Timeline
+
+    public init(tick: Tick, timeline: Timeline) {
+      self.tick = tick
+      self.timeline = timeline
+    }
   }
 
   public struct LayoutState: Equatable {
     public var portrait: ConcentricityState
     public var landscape: ConcentricityState
 
+    public init(portrait: RingsViewState.LayoutState.ConcentricityState,
+                landscape: RingsViewState.LayoutState.ConcentricityState)
+    {
+      self.portrait = portrait
+      self.landscape = landscape
+    }
+
     public struct ConcentricityState: Equatable {
       public var concentricity: CGFloat
-      public var (scaleFactorWhenFullyAcentric, scaleFactorWhenFullyConcentric): (CGFloat, CGFloat)
-      public var spreadOut: Axis
+      public var (scaleFactorAcentric, scaleFactorConcentric): (CGFloat, CGFloat)
+      public var spread: Axis
 
       public enum Axis: Equatable {
         case vertical, horizontal
       }
 
+      public init(concentricity: CGFloat,
+                  scaleFactorAcentric: CGFloat,
+                  scaleFactorConcentric: CGFloat,
+                  acentricSpread: RingsViewState.LayoutState.ConcentricityState.Axis)
+      {
+        self.concentricity = concentricity
+        self.scaleFactorAcentric = scaleFactorAcentric
+        self.scaleFactorConcentric = scaleFactorConcentric
+        spread = acentricSpread
+      }
+
       var scaleFactor: CGFloat {
-        // Return a derived scale factor by blending both acentric and concentric scale
-        // factors together depending on the current concentricity value.
+        // Return a derived scale factor by blending both acentric and
+        // concentric scale factors together depending on the current
+        // concentricity value.
         valueInConcentricRangeAt(concentricity: abs(concentricity),
-                                 concentricMax: scaleFactorWhenFullyConcentric,
-                                 acentricMin: scaleFactorWhenFullyAcentric)
+                                 concentricMax: scaleFactorConcentric,
+                                 acentricMin: scaleFactorAcentric)
       }
 
       func spreadAxisKeyPathFor(bounds _: CGRect) -> KeyPath<CGPoint, CGFloat> {
-        // Return the coordinate keypath to use for correctly positioning the rings
-        // along the preferred horizontal or vertical axis.
-        switch spreadOut {
+        // Return the coordinate keypath to use for correctly positioning
+        // the rings along the preferred horizontal or vertical axis.
+        switch spread {
         case .vertical:
           return \CGPoint.y
 
@@ -82,20 +116,22 @@ public struct RingsEnvironment {
   }
 }
 
-public let ringsViewReducer = Reducer<RingsViewState, RingsViewAction, RingsEnvironment> { state, action, environment in
+public let ringsViewReducer = Reducer<RingsViewState,
+  RingsViewAction,
+  RingsEnvironment> { state, action, environment in
   switch action {
   case .acentricRingsPinched(let scaleFactor, let whilePortrait):
     if whilePortrait {
-      state.layout.portrait.scaleFactorWhenFullyAcentric = scaleFactor
+      state.layout.portrait.scaleFactorAcentric = scaleFactor
     } else {
-      state.layout.landscape.scaleFactorWhenFullyAcentric = scaleFactor
+      state.layout.landscape.scaleFactorAcentric = scaleFactor
     }
 
   case .concentricRingsPinched(let scaleFactor, let whilePortrait):
     if whilePortrait {
-      state.layout.portrait.scaleFactorWhenFullyConcentric = scaleFactor
+      state.layout.portrait.scaleFactorConcentric = scaleFactor
     } else {
-      state.layout.landscape.scaleFactorWhenFullyConcentric = scaleFactor
+      state.layout.landscape.scaleFactorConcentric = scaleFactor
     }
 
   case .concentricRingsTappedInColoredBandsArea:

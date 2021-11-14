@@ -29,19 +29,19 @@ class RingsViewTests: XCTestCase {
     let store = TestStore(initialState: RingsViewState(), reducer: ringsViewReducer, environment: .mock)
 
     store.send(.concentricRingsPinched(scaleFactor: 0.5, whilePortrait: true)) {
-      $0.layout.portrait.scaleFactorWhenFullyConcentric = 0.5
+      $0.layout.portrait.scaleFactorConcentric = 0.5
     }
 
     store.send(.concentricRingsPinched(scaleFactor: 0.4, whilePortrait: false)) {
-      $0.layout.landscape.scaleFactorWhenFullyConcentric = 0.4
+      $0.layout.landscape.scaleFactorConcentric = 0.4
     }
 
     store.send(.acentricRingsPinched(scaleFactor: 0.3, whilePortrait: true)) {
-      $0.layout.portrait.scaleFactorWhenFullyAcentric = 0.3
+      $0.layout.portrait.scaleFactorAcentric = 0.3
     }
 
     store.send(.acentricRingsPinched(scaleFactor: 0.2, whilePortrait: false)) {
-      $0.layout.landscape.scaleFactorWhenFullyAcentric = 0.2
+      $0.layout.landscape.scaleFactorAcentric = 0.2
     }
   }
 

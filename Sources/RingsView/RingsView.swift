@@ -75,7 +75,7 @@ public final class RingsView: UIView {
   private var panStartConcentricity: CGFloat = 0.0
 
   private var layoutDirection: RingsViewState.LayoutState.ConcentricityState.Axis {
-    switch viewStore.layout.portrait.spreadOut {
+    switch viewStore.layout.portrait.spread {
     case .vertical: return .vertical
     case .horizontal: return .horizontal
     }
@@ -544,7 +544,7 @@ private extension AnnotatedRingsLayoutModel {
   init(bounds: CGRect, state: RingsViewState.LayoutInformation) {
     let layout = bounds.isPortrait ? state.layout.portrait : state.layout.landscape
 
-    switch layout.spreadOut {
+    switch layout.spread {
     case .vertical:
       self = AnnotatedRingsLayoutModel(isAlwaysPortrait: true, bounds: bounds, layout: layout, focus: state.prominentRing)
 
