@@ -317,7 +317,7 @@
 //  case ringsVieww(RingsViewAction)
 //  case settingsEditor(SettingsEditorAction)
 //  case showDataButtonTapped
-//  case tabBarItemTapped(NavigationTabIdentifier)
+//  case tabBarItemTapped
 //  case timeline(TimelineAction)
 //  case timer(TimerAction)
 // }

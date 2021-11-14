@@ -19,6 +19,10 @@ let package = Package(
       targets: ["InterruptionPicker"]
     ),
     .library(
+      name: "ButtonsBarFeature",
+      targets: ["ButtonsBarFeature"]
+    ),
+    .library(
       name: "Notifications",
       targets: ["Notifications"]
     ),
@@ -92,12 +96,20 @@ let package = Package(
         "SwiftUIKit",
         "Timeline",
         "TimelineReports",
+        "ButtonsBarFeature",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ]
     ),
     .target(
       name: "InterruptionPicker",
       dependencies: ["SwiftUIKit", "Timeline"]
+    ),
+    .target(
+      name: "ButtonsBarFeature",
+      dependencies: [
+        "SwiftUIKit",
+        .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+      ]
     ),
     .target(
       name: "Notifications",
@@ -120,6 +132,13 @@ let package = Package(
         "RingsView",
       ]
     ),
+    .testTarget(
+      name: "ButtonsBarFeatureTests",
+      dependencies: [
+        "ButtonsBarFeature",
+      ]
+    ),
+
     .testTarget(
       name: "PromptsFeatureTests",
       dependencies: [
