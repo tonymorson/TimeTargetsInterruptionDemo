@@ -17,11 +17,11 @@ public final class PromptsView: UIButton {
       let prompts = state.prompts
 
       var title = AttributedString(prompts.0.isEmpty ? " " : prompts.0)
-      title.font = UIFont.systemFont(ofSize: 24, weight: .light).rounded()
+      title.font = UIFont.systemFont(ofSize: 18, weight: .light).rounded()
       title.foregroundColor = .systemRed
 
       var subtitle = AttributedString(prompts.1.isEmpty ? " " : prompts.1)
-      subtitle.font = UIFont.systemFont(ofSize: 18, weight: .light).rounded()
+      subtitle.font = UIFont.systemFont(ofSize: 15, weight: .light).rounded()
       subtitle.foregroundColor = .label
 
       let timelineActionMenuItems = state.timelineActionMenuItems
