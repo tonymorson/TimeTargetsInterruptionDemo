@@ -117,9 +117,10 @@ final class RingTextView: UIView {
 
   var content: Content = .init() {
     didSet {
-      if oldValue != content {
+      // Don't check for oldValue here... if you do
+      // you will break changing theme updates from
+      // dark to light mode...
         layer.setNeedsDisplay()
-      }
     }
   }
 
