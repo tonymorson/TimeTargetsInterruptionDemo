@@ -5,7 +5,6 @@ import PromptsFeature
 import RingsView
 import SettingsFeature
 import SwiftUI
-import SwiftUIKit
 import TabBarFeature
 import Ticks
 import Timeline
@@ -186,30 +185,16 @@ public class AppViewController: UIViewController {
     }
 
     let toolbar = ToolbarView(store: store.scope(state: \.toolbar, action: AppAction.toolbar))
-
-    view.host(toolbar) { _, _ in
-//      toolbar.safeAreaLayoutGuide.topAnchor.constraint(equalTo: host.topAnchor)
-//      toolbar.safeAreaLayoutGuide.leadingAnchor.constraint(equalTo: host.leadingAnchor)
-//      toolbar.safeAreaLayoutGuide.trailingAnchor.constraint(equalTo: host.trailingAnchor)
-    }
+    toolbar.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(toolbar)
 
     let ringsView = RingsView(viewStore: ViewStore(store.scope(state: \.rings, action: AppAction.rings)))
-    view.host(ringsView) { _, _ in
-//      v.leadingAnchor.constraint(equalTo: p.safeAreaLayoutGuide.leadingAnchor)
-//      v.trailingAnchor.constraint(equalTo: p.safeAreaLayoutGuide.trailingAnchor)
-//
-//      v.topAnchor.constraint(equalTo: toolbar.bottomAnchor)
-    }
+    ringsView.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(ringsView)
 
     let promptsView = PromptsView(store: store.scope(state: \.prompts, action: AppAction.prompts))
-
-    view.host(promptsView) { _, _ in
-//      v.leadingAnchor.constraint(equalTo: p.safeAreaLayoutGuide.leadingAnchor)
-//      v.trailingAnchor.constraint(equalTo: p.safeAreaLayoutGuide.trailingAnchor)
-//
-      ////      v.topAnchor.constraint(equalTo: ringsView.safeAreaLayoutGuide.bottomAnchor)
-      ////      v.bottomAnchor.constraint(equalTo: p.safeAreaLayoutGuide.bottomAnchor)
-    }
+    promptsView.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(promptsView)
 
 //    promptVerticalTopConstraint = promptsView.topAnchor.constraint(equalTo: ringsView.safeAreaLayoutGuide.bottomAnchor)
 //    promptVerticalBottomConstraint = promptsView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
@@ -218,13 +203,8 @@ public class AppViewController: UIViewController {
 //    promptVerticalBottomConstraint.isActive = true
 
     let tabBar = TabBarView(store: store.scope(state: \.tabBar, action: AppAction.tabBar))
-
-    view.host(tabBar) { _, _ in
-//      v.leadingAnchor.constraint(equalTo: p.leadingAnchor)
-//      v.trailingAnchor.constraint(equalTo: p.trailingAnchor)
-
-//      v.bottomAnchor.constraint(equalTo: p.safeAreaLayoutGuide.bottomAnchor)
-    }
+    tabBar.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(tabBar)
 
     let verticalStackView = UIStackView()
     verticalStackView.translatesAutoresizingMaskIntoConstraints = false
