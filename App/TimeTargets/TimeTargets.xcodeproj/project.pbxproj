@@ -126,8 +126,9 @@
 			children = (
 				4181CC3527065685007D9AD9 /* InterruptionPickerPreview */,
 				4198972F26EE0996008CB625 /* NotificationSettingsEditorPreview */,
-				416F64F826EE244C000DF69C /* SettingsEditorPreview */,
+				41B9D1F3272EE01D00B0988A /* PromptsFeaturePreview */,
 				41B9AA7826EF315500CE6606 /* RingsViewPreview */,
+				416F64F826EE244C000DF69C /* SettingsEditorPreview */,
 			);
 			path = Previews;
 			sourceTree = "<group>";
@@ -157,7 +158,6 @@
 			children = (
 				418F9A1226ECB39A0005624B /* iOS */,
 				416F64F226EE11E5000DF69C /* Previews */,
-				41B9D1F3272EE01D00B0988A /* PromptsFeaturePreview */,
 				418F99F726ECB3830005624B /* Products */,
 				4117DBFB26ECB59100DE4AEA /* Frameworks */,
 			);
@@ -932,7 +932,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = F3Q5VERFTA;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = PromptsFeaturePreview/Info.plist;
+				INFOPLIST_FILE = Previews/PromptsFeaturePreview/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -960,7 +960,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = F3Q5VERFTA;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = PromptsFeaturePreview/Info.plist;
+				INFOPLIST_FILE = Previews/PromptsFeaturePreview/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
