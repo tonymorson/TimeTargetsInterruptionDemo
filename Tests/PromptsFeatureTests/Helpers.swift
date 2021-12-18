@@ -7,7 +7,7 @@ import XCTest
 
 internal func annotated(title: String) -> AttributedString {
   var title = AttributedString(title)
-  title.font = UIFont.systemFont(ofSize: 24, weight: .light).rounded()
+  title.font = UIFont.systemFont(ofSize: 18, weight: .light).rounded()
   title.foregroundColor = .systemRed
 
   return title
@@ -15,7 +15,7 @@ internal func annotated(title: String) -> AttributedString {
 
 internal func annotated(subtitle: String) -> AttributedString {
   var subtitle = AttributedString(subtitle)
-  subtitle.font = UIFont.systemFont(ofSize: 18, weight: .light).rounded()
+  subtitle.font = UIFont.systemFont(ofSize: 15, weight: .light).rounded()
   subtitle.foregroundColor = .label
 
   return subtitle
