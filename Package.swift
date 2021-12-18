@@ -23,8 +23,8 @@ let package = Package(
       targets: ["InterruptionPicker"]
     ),
     .library(
-      name: "ButtonsBarFeature",
-      targets: ["ButtonsBarFeature"]
+      name: "ToolbarFeature",
+      targets: ["ToolbarFeature"]
     ),
     .library(
       name: "Notifications",
@@ -39,8 +39,8 @@ let package = Package(
       targets: ["PromptsFeature"]
     ),
     .library(
-      name: "SettingsEditor",
-      targets: ["SettingsEditor"]
+      name: "SettingsFeature",
+      targets: ["SettingsFeature"]
     ),
     .library(
       name: "SwiftUIKit",
@@ -96,12 +96,12 @@ let package = Package(
         "InterruptionPicker",
         "PromptsFeature",
         "RingsView",
-        "SettingsEditor",
+        "SettingsFeature",
         "SwiftUIKit",
         "TabBarFeature",
         "Timeline",
         "TimelineReports",
-        "ButtonsBarFeature",
+        "ToolbarFeature",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ]
     ),
@@ -112,11 +112,19 @@ let package = Package(
       ]
     ),
     .target(
+      name: "SettingsFeature",
+      dependencies: [
+        "Durations",
+        "Notifications",
+        .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+      ]
+    ),
+    .target(
       name: "InterruptionPicker",
       dependencies: ["SwiftUIKit", "Timeline"]
     ),
     .target(
-      name: "ButtonsBarFeature",
+      name: "ToolbarFeature",
       dependencies: [
         "SwiftUIKit",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
@@ -143,12 +151,6 @@ let package = Package(
         "RingsView",
       ]
     ),
-    .testTarget(
-      name: "ButtonsBarFeatureTests",
-      dependencies: [
-        "ButtonsBarFeature",
-      ]
-    ),
 
     .testTarget(
       name: "PromptsFeatureTests",
@@ -171,10 +173,6 @@ let package = Package(
         "UserActivity",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ]
-    ),
-    .target(
-      name: "SettingsEditor",
-      dependencies: ["Durations", "Notifications"]
     ),
     .target(
       name: "SwiftUIKit",

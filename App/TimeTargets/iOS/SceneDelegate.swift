@@ -11,9 +11,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     window.rootViewController = AppViewController(nibName: nil, bundle: nil)
 
-    // Style the window and root view to the appripriate choices so we get the standard look
-    // and feel when presenting more view controlelrs later on.
-    window.overrideUserInterfaceStyle = .dark
+    // Style the window and root view to the appropriate choices so we get the standard look
+    // and feel when presenting more view controllers later on.
+//    window.overrideUserInterfaceStyle = .dark
     window.backgroundColor = .black
     window.rootViewController?.view.backgroundColor = .systemBackground
 

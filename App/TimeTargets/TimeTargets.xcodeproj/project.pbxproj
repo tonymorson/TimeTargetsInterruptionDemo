@@ -28,6 +28,7 @@
 		41B9D206272EE03000B0988A /* Preview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B9D1C0272EDB0800B0988A /* Preview.swift */; };
 		41B9D207272EE03000B0988A /* Boilerplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B9D1BE272EDB0800B0988A /* Boilerplate.swift */; };
 		41B9D209272EE33D00B0988A /* PromptsFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 41B9D208272EE33D00B0988A /* PromptsFeature */; };
+		41D2D21427439A04000AE0E0 /* SettingsFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 41D2D21327439A04000AE0E0 /* SettingsFeature */; };
 		41D379442728E1FF00079E94 /* XcodePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D379422728E16600079E94 /* XcodePreview.swift */; };
 /* End PBXBuildFile section */
 
@@ -67,6 +68,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				41D2D21427439A04000AE0E0 /* SettingsFeature in Frameworks */,
 				416F650E26EE24D8000DF69C /* SettingsEditor in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -238,6 +240,7 @@
 			name = SettingsEditorPreview;
 			packageProductDependencies = (
 				416F650D26EE24D8000DF69C /* SettingsEditor */,
+				41D2D21327439A04000AE0E0 /* SettingsFeature */,
 			);
 			productName = SettingsEditorPreview;
 			productReference = 416F64F726EE244C000DF69C /* SettingsEditorPreview.app */;
@@ -1070,6 +1073,10 @@
 		41B9D208272EE33D00B0988A /* PromptsFeature */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PromptsFeature;
+		};
+		41D2D21327439A04000AE0E0 /* SettingsFeature */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SettingsFeature;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
