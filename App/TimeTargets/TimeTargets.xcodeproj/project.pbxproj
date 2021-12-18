@@ -10,7 +10,6 @@
 		411ABF4527035C1E00D9E92A /* Application in Frameworks */ = {isa = PBXBuildFile; productRef = 411ABF4427035C1E00D9E92A /* Application */; };
 		416F64FA26EE244C000DF69C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 416F64F926EE244C000DF69C /* AppDelegate.swift */; };
 		416F64FC26EE244C000DF69C /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 416F64FB26EE244C000DF69C /* SceneDelegate.swift */; };
-		416F650E26EE24D8000DF69C /* SettingsEditor in Frameworks */ = {isa = PBXBuildFile; productRef = 416F650D26EE24D8000DF69C /* SettingsEditor */; };
 		4181CC3727065685007D9AD9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4181CC3627065685007D9AD9 /* AppDelegate.swift */; };
 		4181CC3927065685007D9AD9 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4181CC3827065685007D9AD9 /* SceneDelegate.swift */; };
 		418F9A1426ECB39A0005624B /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 418F9A1326ECB39A0005624B /* AppDelegate.swift */; };
@@ -69,7 +68,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				41D2D21427439A04000AE0E0 /* SettingsFeature in Frameworks */,
-				416F650E26EE24D8000DF69C /* SettingsEditor in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -239,7 +237,6 @@
 			);
 			name = SettingsEditorPreview;
 			packageProductDependencies = (
-				416F650D26EE24D8000DF69C /* SettingsEditor */,
 				41D2D21327439A04000AE0E0 /* SettingsFeature */,
 			);
 			productName = SettingsEditorPreview;
@@ -1053,10 +1050,6 @@
 		411ABF4427035C1E00D9E92A /* Application */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Application;
-		};
-		416F650D26EE24D8000DF69C /* SettingsEditor */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SettingsEditor;
 		};
 		4198974226EE0A61008CB625 /* NotificationSettingsEditor */ = {
 			isa = XCSwiftPackageProductDependency;
