@@ -2,7 +2,6 @@ import ComposableArchitecture
 import Foundation
 import Timeline
 
-
 public func tickEffect(for timeline: Timeline, at tick: Tick, on scheduler: AnySchedulerOf<RunLoop>) -> Effect<RunLoop.SchedulerTimeType, Never> {
   struct TimerId: Hashable {}
 

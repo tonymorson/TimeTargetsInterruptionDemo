@@ -50,6 +50,10 @@ let package = Package(
       name: "TimelineTickEffect",
       targets: ["TimelineTickEffect"]
     ),
+    .library(
+      name: "UIKitReactiveHelpers",
+      targets: ["UIKitReactiveHelpers"]
+    ),
 
     // Model
     .library(
@@ -104,6 +108,7 @@ let package = Package(
     .target(
       name: "ToolbarFeature",
       dependencies: [
+        "UIKitReactiveHelpers",
         "SwiftUIKit",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ]
@@ -151,6 +156,10 @@ let package = Package(
     ),
     .target(
       name: "SwiftUIKit",
+      dependencies: []
+    ),
+    .target(
+      name: "UIKitReactiveHelpers",
       dependencies: []
     ),
 

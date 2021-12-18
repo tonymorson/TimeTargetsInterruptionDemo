@@ -1,7 +1,6 @@
 import ComposableArchitecture
 import Foundation
 import Timeline
-import TimelineTickEffect
 import UserActivity
 
 // TODO:

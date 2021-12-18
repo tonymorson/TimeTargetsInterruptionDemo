@@ -1,12 +1,12 @@
 import Combine
 import UIKit
 
-extension UIControl {
+public extension UIControl {
   struct EventPublisher: Publisher {
     // Declaring that our publisher doesn't emit any values,
     // and that it can never fail:
-    typealias Output = Void
-    typealias Failure = Never
+    public typealias Output = Void
+    public typealias Failure = Never
 
     fileprivate var control: UIControl
     fileprivate var event: Event
@@ -15,7 +15,7 @@ extension UIControl {
     // a new object started observing it. Within this method,
     // we'll need to create a subscription instance and
     // attach it to the new subscriber:
-    func receive<S: Subscriber>(
+    public func receive<S: Subscriber>(
       subscriber: S
     ) where S.Input == Output, S.Failure == Failure {
       // Creating our custom subscription instance:
@@ -62,17 +62,11 @@ private extension UIControl {
   }
 }
 
-extension UIControl {
+public extension UIControl {
   func publisher(for event: Event) -> EventPublisher {
     EventPublisher(
       control: self,
       event: event
     )
   }
-}
-
-let button = UIButton()
-
-let subscription = button.publisher(for: .touchUpInside).sink {
-  // Handle tap
 }
