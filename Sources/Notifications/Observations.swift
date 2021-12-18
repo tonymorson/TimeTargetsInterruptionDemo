@@ -1,6 +1,4 @@
 import Foundation
-import Periods
-import Ticks
 import Timeline
 
 struct LiveTimeline: Equatable, Codable {

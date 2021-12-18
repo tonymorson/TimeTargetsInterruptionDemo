@@ -53,32 +53,12 @@ let package = Package(
 
     // Model
     .library(
-      name: "Countdown",
-      targets: ["Countdown"]
-    ),
-    .library(
       name: "UserActivity",
       targets: ["UserActivity"]
     ),
     .library(
-      name: "Durations",
-      targets: ["Durations"]
-    ),
-    .library(
-      name: "Ticks",
-      targets: ["Ticks"]
-    ),
-    .library(
-      name: "Periods",
-      targets: ["Periods"]
-    ),
-    .library(
       name: "Timeline",
       targets: ["Timeline"]
-    ),
-    .library(
-      name: "TimelineReports",
-      targets: ["TimelineReports"]
     ),
   ],
 
@@ -100,7 +80,6 @@ let package = Package(
         "SwiftUIKit",
         "TabBarFeature",
         "Timeline",
-        "TimelineReports",
         "ToolbarFeature",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ]
@@ -114,7 +93,6 @@ let package = Package(
     .target(
       name: "SettingsFeature",
       dependencies: [
-        "Durations",
         "Notifications",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ]
@@ -138,9 +116,7 @@ let package = Package(
       name: "RingsView",
       dependencies: [
         "SwiftUIKit",
-        "Ticks",
         "Timeline",
-        "TimelineReports",
         "TimelineTickEffect",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ]
@@ -167,7 +143,6 @@ let package = Package(
     .target(
       name: "PromptsFeature",
       dependencies: [
-        "Ticks",
         "Timeline",
         "TimelineTickEffect",
         "UserActivity",
@@ -190,36 +165,15 @@ let package = Package(
       ]
     ),
     .target(
-      name: "Countdown",
-      dependencies: ["Ticks"]
-    ),
-    .target(
-      name: "Durations",
-      dependencies: ["Ticks"]
-    ),
-    .target(
-      name: "Periods",
-      dependencies: ["Durations", "Ticks"]
-    ),
-    .target(
-      name: "Ticks",
-      dependencies: []
-    ),
-    .target(
       name: "Timeline",
-      dependencies: ["Countdown", "Periods", "Ticks"]
+      dependencies: []
     ),
     .target(
       name: "TimelineTickEffect",
       dependencies: [
-        "Ticks",
         "Timeline",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ]
-    ),
-    .target(
-      name: "TimelineReports",
-      dependencies: ["Periods", "Ticks", "Timeline"]
     ),
   ]
 )

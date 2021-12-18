@@ -1,6 +1,5 @@
 import ComposableArchitecture
 import Foundation
-import Ticks
 import Timeline
 import TimelineTickEffect
 import UIKit

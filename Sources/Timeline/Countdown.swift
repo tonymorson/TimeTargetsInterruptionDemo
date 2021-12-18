@@ -1,5 +1,4 @@
 import Foundation
-import Ticks
 
 public struct Countdown: Equatable, Codable {
   public var ticks: Ticks

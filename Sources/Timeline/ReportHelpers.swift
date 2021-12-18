@@ -1,6 +1,4 @@
 import Foundation
-import Periods
-import Ticks
 
 public extension Report {
   var periodHeadline: String {

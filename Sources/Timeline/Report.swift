@@ -1,8 +1,4 @@
-import Durations
 import Foundation
-import Periods
-import Ticks
-import Timeline
 
 public struct Report: Codable, Equatable {
   public let timeline: Timeline
@@ -265,11 +261,5 @@ private extension Array where Element == Ticks {
       return true
     }
     return false
-  }
-}
-
-extension Ticks {
-  var duration: Duration {
-    count.seconds - 1.seconds
   }
 }

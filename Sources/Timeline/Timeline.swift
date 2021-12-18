@@ -1,7 +1,4 @@
-import Countdown
 import Foundation
-import Periods
-import Ticks
 
 public struct Timeline: Equatable, Codable {
   public var countdown: Countdown

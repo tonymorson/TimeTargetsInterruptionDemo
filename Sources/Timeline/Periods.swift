@@ -1,6 +1,4 @@
-import Durations
 import Foundation
-import Ticks
 
 public extension Array where Element == Period {
   func periodAt(tick: Tick) -> Period? {

@@ -1,5 +1,5 @@
 import Foundation
-import TimelineReports
+import Timeline
 import UIKit
 
 struct AnnotatedRingsContentModel {

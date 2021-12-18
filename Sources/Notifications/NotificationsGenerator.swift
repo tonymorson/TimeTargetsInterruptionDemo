@@ -1,5 +1,4 @@
 import Foundation
-import Ticks
 import Timeline
 import UserNotifications
 
