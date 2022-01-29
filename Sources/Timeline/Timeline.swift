@@ -118,7 +118,7 @@ public extension WorkPattern {
     let sessionProgress = currentSession.workProgress(at: tick)
     let sessionsProgress = sessionProgress + 1.0 * Double(sessionID)
 
-    return sessionsProgress * Double(numWorkPeriods) / Double(dailyTarget)
+    return sessionsProgress * Double(numWorkPeriodsPerSession) / Double(dailyTarget)
   }
 }
 

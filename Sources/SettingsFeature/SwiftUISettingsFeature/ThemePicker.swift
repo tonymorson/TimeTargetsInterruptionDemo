@@ -2,6 +2,15 @@ import SwiftUI
 
 public enum Theme { case light, dark }
 
+public extension UIUserInterfaceStyle {
+   init(theme: Theme) {
+    switch theme {
+    case .dark: self = .dark
+    case .light: self = .light
+    }
+  }
+}
+
 struct ThemePicker: View {
   var title: String
   @Binding var setting: Theme?
@@ -23,6 +32,7 @@ struct ThemePicker: View {
       }
   }
 }
+
 
 struct ThemePickerList: View {
   @Binding var setting: Theme?

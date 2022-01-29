@@ -110,7 +110,7 @@ public final class ToolbarView: UIView {
 
     // MARK: NSLayoutConstraints Creation
 
-    settingsModalButton.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
+    settingsModalButton.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
     [tabsPanelGroupView,
      showTabsPanelModalButton,
      settingsModalButton,
@@ -121,7 +121,7 @@ public final class ToolbarView: UIView {
     }
 
     NSLayoutConstraint.activate([
-      showTabsPanelModalButton.topAnchor.constraint(equalTo: topAnchor),
+      showTabsPanelModalButton.lastBaselineAnchor.constraint(equalTo: settingsModalButton.lastBaselineAnchor),
       showTabsPanelModalButton.trailingAnchor.constraint(equalTo: trailingAnchor),
       showTabsPanelModalButton.widthAnchor.constraint(equalToConstant: 44),
 //      showTabsPanelModalButton.heightAnchor.constraint(equalToConstant: 44),

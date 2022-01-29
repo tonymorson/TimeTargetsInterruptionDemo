@@ -89,8 +89,12 @@ extension PromptsState {
     case .paused(.restingAtTickZero):
       let x = timeline.numOfWorkPeriodsRemaining(at: tick)
 
-      title = "Ready to start?"
-      subtitle = "You have \(x) work periods remaining."
+      title = "Ready to start a new work schedule?"
+//      subtitle = "You have 10 periods of work scheduled for today split over three sessions. During each session you will asked to take a 4 breaks. Allowing for a few interruptions and an hour for lunch, expect to be finished by around 6pm."
+//      subtitle = "You have 10 periods of work scheduled for today and you will be asked to take 9 breaks along the way. After a session of 4 work periods your break will be slightly longer than usual. Allowing for a few interruptions and an hour for lunch, expect to be finished by around 6pm."
+      subtitle = "You have 10 periods of work scheduled for today and you will be asked to take 9 breaks along the way. Allowing for a few interruptions and an hour for lunch, expect to be finished by around 6pm."
+
+//      subtitle = "You have 10 periods of work scheduled for today. Expect to be finished by around 6pm."
 
     case .paused(.restingAtStartOfWorkPeriod):
       let x = timeline.numOfWorkPeriodsRemaining(at: tick)
@@ -123,7 +127,7 @@ extension PromptsState {
       subtitle = "This is your 5th interruption this period." // FIXME:
 
     case .running(.inLastPhaseOfWorkPeriod):
-      title = "Prepare to wind down work period soon."
+      title = "Short break starts soon."
       subtitle = "Next break at \(nextPeriodETADesc)."
 
     case .running(.inLastPhaseOfBreakPeriod):
@@ -135,7 +139,10 @@ extension PromptsState {
       subtitle = "Next work period at \(nextPeriodETADesc)."
 
     case .running(.resumedWorkPeriod):
-      title = "Resumed work period!"
+      let timeDescription = Date().formatted(date: .omitted,
+                                                       time: .shortened)
+
+      title = "Resumed work period at \(timeDescription)"
       subtitle = "Next break at \(nextPeriodETADesc)."
 
     case .running(.transitioningToNextBreakPeriod):
@@ -143,7 +150,7 @@ extension PromptsState {
       subtitle = "Next work period at \(nextPeriodETADesc)."
 
     case .running(.transitioningToNextWorkPeriod):
-      title = "Time to start work!"
+      title = "Time to resume work!"
       subtitle = "Next break at \(nextPeriodETADesc)."
 
     case .running(.fromStartOfBreakPeriod):
@@ -188,7 +195,7 @@ extension PromptsState {
     let isAtStartOfPeriod = currentPeriod.firstTick == tick
 
     if isCountingDown == false, tick == .zero {
-      return [.startSchedule]
+      return [.startSchedule, .changeSchedule]
     }
 
     switch (isCountingDown, isWorkTime, isAtStartOfPeriod) {
@@ -232,6 +239,7 @@ extension PromptsState {
 extension PromptsView.ViewAction.TimelineAction {
   var menuTitle: String {
     switch self {
+    case .changeSchedule: return "Change Schedule..."
     case .startSchedule: return "Start Schedule"
     case .startBreak: return "Start Break"
     case .startWorkPeriod: return "Start Work Period"
@@ -249,6 +257,7 @@ extension PromptsView.ViewAction.TimelineAction {
 
   var menuImageName: String? {
     switch self {
+    case .changeSchedule: return "gear"
     case .startSchedule: return "arrow.right"
     case .startBreak: return "arrow.right"
     case .startWorkPeriod: return "arrow.right"
@@ -270,6 +279,8 @@ extension PromptsAction {
     switch action {
     case .timeline(.startSchedule):
       self = .timeline(.resume)
+    case .timeline(.changeSchedule):
+      fatalError()
     case .timeline(.startWorkPeriod):
       self = .timeline(.resume)
     case .timeline(.startBreak):

@@ -84,7 +84,9 @@ struct AppState: Equatable {
       case .today: tab = .today
       }
 
-      return .init(isShowingTabBar: isShowingBottomToolbar, isShowingSettingsEditor: isShowingSettings, selectedTab: tab)
+      return .init(isShowingTabBar: isShowingBottomToolbar,
+                   isShowingSettingsEditor: isShowingSettings,
+                   selectedTab: tab)
     }
     set {
       isShowingSettings = newValue.isShowingSettingsEditor
@@ -99,9 +101,49 @@ struct AppState: Equatable {
       }
     }
   }
+  
+  var periodBars: [SessionViewContent] {
+    let targetTick = timeline.periods.targetTick(at: 0, workPeriodsPerDay: timeline.dailyTarget)
+    
+    let lastPeriodTick = max (targetTick, timeline.periods.periodAt(tick).lastTick)
+    
+    let periods = timeline.periods.periods(from: 0, to: lastPeriodTick)
+    
+    let periodData = periods.filter(\.isWorkPeriod).map { period -> PeriodBarContent in
+      let percentage = period.tickRange.progress(at: tick)
+      
+      let session = timeline.periods.sessionAt(period.lastTick).periods
+      
+      let fillColor: Color
+      if tick >= targetTick {
+        fillColor = .yellow
+      } else {
+        let progress = session.workProgress(at: tick)
+        
+        fillColor = progress < 1.0 ? .red : .green
+      }
+      
+      return PeriodBarContent(percentage: percentage,
+                              fillColor: fillColor,
+                              isGlowing: false,
+                              isPulsing: false,
+                              id: period.firstTick)
+    }
+    
+    return [SessionViewContent(periods: periodData, id: 0)]
+  
+  }
 
   init() {
-    ringsLayout = .init(portrait: .init(concentricity: 0.0, scaleFactorAcentric: 1.0, scaleFactorConcentric: 1.0, acentricSpread: .vertical), landscape: .init(concentricity: 1.0, scaleFactorAcentric: 1.0, scaleFactorConcentric: 1.0, acentricSpread: .horizontal))
+    ringsLayout = .init(portrait: .init(concentricity: 0.0,
+                                        scaleFactorAcentric: 1.0,
+                                        scaleFactorConcentric: 1.0,
+                                        acentricSpread: .vertical),
+                        
+                        landscape: .init(concentricity: 1.0,
+                                         scaleFactorAcentric: 1.0,
+                                         scaleFactorConcentric: 1.0,
+                                         acentricSpread: .horizontal))
 
     prominentRing = .period
 
@@ -171,6 +213,23 @@ public class AppViewController: UIViewController {
 
   override public func viewDidLoad() {
     super.viewDidLoad()
+//    
+//    let controller = UIHostingController(rootView: Home())
+//    addChild(controller)
+//    controller.view.translatesAutoresizingMaskIntoConstraints = false
+//    
+//    view.addSubview(controller.view)
+//
+//    NSLayoutConstraint.activate([
+//      view.leadingAnchor.constraint(equalTo: controller.view.leadingAnchor),
+//      view.trailingAnchor.constraint(equalTo: controller.view.trailingAnchor),
+//      view.bottomAnchor.constraint(equalTo: controller.view.bottomAnchor),
+//      view.topAnchor.constraint(equalTo: controller.view.topAnchor),
+//    ])
+//
+//    controller.didMove(toParent: self)
+//    
+//    return
     view.tintColor = .systemRed
 
     // Update traits after setting up all bindings to trigger
@@ -193,6 +252,25 @@ public class AppViewController: UIViewController {
     let promptsView = PromptsView(store: store.scope(state: \.prompts, action: AppAction.prompts))
     promptsView.translatesAutoresizingMaskIntoConstraints = false
     view.addSubview(promptsView)
+    
+    let taskTitle = UILabel()
+    taskTitle.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(taskTitle)
+    
+    taskTitle.text = "Task 1"
+    
+    let periodBars = UIHostingController(rootView: PeriodBars(sessions: ViewStore(store.scope(state: \.periodBars, action: { _ in fatalError() }))))
+    addChild(periodBars)
+    periodBars.view.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(periodBars.view)
+    periodBars.didMove(toParent: self)
+
+    NSLayoutConstraint.activate([
+      taskTitle.centerXAnchor.constraint(equalTo: toolbar.centerXAnchor),
+      taskTitle.centerYAnchor.constraint(equalTo: toolbar.centerYAnchor),
+//      toolbar.heightAnchor.constraint(equalToConstant: 44),
+    ])
+    
 
 //    promptVerticalTopConstraint = promptsView.topAnchor.constraint(equalTo: ringsView.safeAreaLayoutGuide.bottomAnchor)
 //    promptVerticalBottomConstraint = promptsView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
@@ -223,37 +301,47 @@ public class AppViewController: UIViewController {
     ringsView.widthAnchor.constraint(greaterThanOrEqualToConstant: 200).isActive = true
 
     let label = UILabel()
-    label.text = "Today"
-    label.font = .preferredFont(forTextStyle: .title2, compatibleWith: traitCollection)
+    label.text = ""
+    label.font = .preferredFont(forTextStyle: .caption1, compatibleWith: traitCollection)
     label.translatesAutoresizingMaskIntoConstraints = false
     view.addSubview(label)
 
     let subtitle = UILabel()
-    subtitle.text = "Rangsit"
+    subtitle.text = ""
     subtitle.font = .preferredFont(forTextStyle: .subheadline, compatibleWith: traitCollection)
     subtitle.textColor = .secondaryLabel
     subtitle.translatesAutoresizingMaskIntoConstraints = false
     view.addSubview(subtitle)
 
-    // Create and subview constraints
     NSLayoutConstraint.activate([
-      toolbar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
+      periodBars.view.leadingAnchor.constraint(equalTo: subtitle.leadingAnchor),
+      periodBars.view.topAnchor.constraint(equalTo: subtitle.topAnchor, constant: 4),
+//      toolbar.heightAnchor.constraint(equalToConstant: 44),
+    ])
+
+//    label.isHidden = true
+    subtitle.isHidden = true
+    // Create and subview constraints
+    let top = toolbar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10)
+    top.priority = .init(999)
+    NSLayoutConstraint.activate([
+      top,
       toolbar.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
       toolbar.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -10),
 //      toolbar.heightAnchor.constraint(equalToConstant: 44),
     ])
 
     NSLayoutConstraint.activate([
-      verticalStackView.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
+      verticalStackView.topAnchor.constraint(equalTo: toolbar.bottomAnchor, constant: 20),
       verticalStackView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 0),
       verticalStackView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: 0),
-      verticalStackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -44),
+      verticalStackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -84),
     ])
 
     let promptsViewShowing = [
-      promptsView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-      promptsView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
-      promptsView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -10),
+      promptsView.bottomAnchor.constraint(equalTo: view.readableContentGuide.bottomAnchor, constant: -20),
+      promptsView.leadingAnchor.constraint(equalTo: view.readableContentGuide.leadingAnchor, constant: 10),
+      promptsView.trailingAnchor.constraint(equalTo: view.readableContentGuide.trailingAnchor, constant: -10),
       promptsView.heightAnchor.constraint(equalToConstant: 44),
     ]
 
@@ -277,12 +365,15 @@ public class AppViewController: UIViewController {
     ]
 
     label.topAnchor.constraint(equalTo: ringsView.topAnchor).isActive = true
-    label.leadingAnchor.constraint(equalTo: ringsView.trailingAnchor, constant: 10).isActive = true
+    label.leadingAnchor.constraint(equalTo: ringsView.trailingAnchor, constant: 20).isActive = true
 
     subtitle.topAnchor.constraint(equalTo: label.bottomAnchor).isActive = true
     subtitle.leadingAnchor.constraint(equalTo: label.leadingAnchor).isActive = true
 
     NSLayoutConstraint.activate(promptsViewShowing)
+    
+    view.bringSubviewToFront(promptsView)
+    view.bringSubviewToFront(tabBar)
 
     // Reactive Layouts
 
@@ -296,12 +387,16 @@ public class AppViewController: UIViewController {
 
         self.view.setNeedsLayout()
 
-        UIView.animate(withDuration: 0.35,
-                       delay: 0,
-                       usingSpringWithDamping: 0.8,
-                       initialSpringVelocity: 1.75) {
+        UIView.animate(withDuration: 0.35) {
           self.view.layoutIfNeeded()
         }
+        
+//        UIView.animate(withDuration: 0.35,
+//                       delay: 0,
+//                       usingSpringWithDamping: 0.8,
+//                       initialSpringVelocity: 1.75) {
+//          self.view.layoutIfNeeded()
+//        }
       }
       .store(in: &cancellables)
 
@@ -340,6 +435,51 @@ public class AppViewController: UIViewController {
           subtitle.alpha = isShowing ? 1.0 : 0.0
           self.view.layoutIfNeeded()
         }
+        
+        var v = self.view.viewWithTag(1002)
+          if v == nil {
+            v = UIView()
+            v!.tag = 1002
+//            v!.backgroundColor = .yellow
+            v!.translatesAutoresizingMaskIntoConstraints = false
+            
+            self.view.addSubview(v!)
+            
+
+            self.view.sendSubviewToBack(v!)
+            NSLayoutConstraint.activate([
+              v!.leadingAnchor.constraint(equalTo: verticalStackView.leadingAnchor),
+              v!.trailingAnchor.constraint(equalTo: verticalStackView.trailingAnchor),
+              v!.topAnchor.constraint(equalTo: horizontalStackView.bottomAnchor),
+              v!.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+              
+            ])
+            
+            let taskListView = TaskList()
+            let taskList = UIHostingController(rootView: taskListView)
+            self.addChild(taskList)
+            taskList.view.translatesAutoresizingMaskIntoConstraints = false
+            v!.addSubview(taskList.view)
+
+            NSLayoutConstraint.activate([
+              v!.leadingAnchor.constraint(equalTo: taskList.view.leadingAnchor),
+              v!.trailingAnchor.constraint(equalTo: taskList.view.trailingAnchor),
+              v!.topAnchor.constraint(equalTo: taskList.view.topAnchor, constant: -20),
+              //              v!.bottomAnchor.constraint(equalTo: taskList.view.bottomAnchor),
+              taskList.view.heightAnchor.constraint(equalToConstant: 800),
+
+
+            ])
+            
+            self.view.bringSubviewToFront(taskList.view)
+
+            
+          }
+        
+//        v!.alpha = isShowing ? 1.0 : 0.0
+
+        
+        
       }
       .store(in: &cancellables)
 
@@ -370,6 +510,18 @@ public class AppViewController: UIViewController {
       }
     }
     .store(in: &cancellables)
+    
+    viewStore.publisher.map(\.isShowingBottomToolbar)
+    .receive(on: DispatchQueue.main)
+    .sink { value in
+      UIView.animate(withDuration: 0.35,
+                     delay: 0,
+                     usingSpringWithDamping: 0.6,
+                     initialSpringVelocity: 1.75) {
+        taskTitle.alpha = value ? 0.0 : 1.0
+      }
+    }
+    .store(in: &cancellables)
 
     lazy var sidePanelTitle: AnyPublisher<String, Never> = {
       viewStore.publisher
@@ -377,7 +529,7 @@ public class AppViewController: UIViewController {
         .map {
           switch $0 {
           case .today:
-            return "Today"
+            return "WORK PERIODS"
           case .tasks:
             return "Tasks"
           case .charts:
@@ -387,13 +539,13 @@ public class AppViewController: UIViewController {
         .eraseToAnyPublisher()
     }()
 
-    lazy var sidePanelSubitle: AnyPublisher<String, Never> = {
+    lazy var sidePanelSubtitle: AnyPublisher<String, Never> = {
       viewStore.publisher
         .map(\.selectedTab)
         .map {
           switch $0 {
           case .today:
-            return "Rangsit"
+            return "Task 1"
           case .tasks:
             return "Blackley"
           case .charts:
@@ -412,7 +564,7 @@ public class AppViewController: UIViewController {
       }
       .store(in: &cancellables)
 
-    sidePanelSubitle
+    sidePanelSubtitle
       .removeDuplicates()
       .sink { text in
         subtitle.text = text
@@ -446,18 +598,9 @@ public class AppViewController: UIViewController {
         self.present(editorViewController, animated: true)
 
         editor.value.$settings.map(\.theme)
-          .sink { [unowned editorViewController] theme in
-            switch theme {
-            case .none:
-              self.overrideUserInterfaceStyle = .unspecified
-              editorViewController.overrideUserInterfaceStyle = .unspecified
-            case .light:
-              self.overrideUserInterfaceStyle = .light
-              editorViewController.overrideUserInterfaceStyle = .light
-            case .dark:
-              self.overrideUserInterfaceStyle = .dark
-              editorViewController.overrideUserInterfaceStyle = .dark
-            }
+          .sink { [weak editorViewController] theme in
+            self.overrideUserInterfaceStyle = theme.map(UIUserInterfaceStyle.init) ?? .unspecified
+            editorViewController?.overrideUserInterfaceStyle = self.overrideUserInterfaceStyle
           }
           .store(in: &self.cancellables)
 
@@ -512,5 +655,35 @@ final class DismissingHostingController: UIHostingController<AnyView> {
 
   deinit {
     onDeinit()
+  }
+}
+
+
+import SwiftUI
+
+struct Home : View {
+  var body: some View {
+    GeometryReader { geometry in
+      
+      if geometry.size.width > geometry.size.height {
+        HStack {
+          VStack {
+            Rectangle().aspectRatio(1, contentMode: .fit).foregroundColor(.red).id(1)
+            Rectangle().aspectRatio(1, contentMode: .fit).foregroundColor(.green).id(2)
+          }
+          Spacer()
+          Rectangle().foregroundColor(.yellow)
+        }
+      } else {
+        VStack {
+          HStack {
+            Rectangle().aspectRatio(1, contentMode: .fit).foregroundColor(.red).id(1)
+            Rectangle().aspectRatio(1, contentMode: .fit).foregroundColor(.green).id(2)
+          }
+          Spacer()
+          Rectangle().foregroundColor(.yellow)
+        }
+      }
+    }
   }
 }

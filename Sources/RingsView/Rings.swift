@@ -155,6 +155,7 @@ public let ringsViewReducer = Reducer<RingsViewState,
 
     return tickEffect(for: timeline, at: state.content.tick, on: .main)
       .map { _ in .timerTicked }
+      .receive(on: DispatchQueue.main)
       .eraseToEffect()
 
   case .ringsViewTapped(.none):

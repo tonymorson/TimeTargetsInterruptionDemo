@@ -6,13 +6,13 @@ public struct WorkPattern: Equatable, Codable {
   public var work: Duration
   public var shortBreak: Duration
   public var longBreak: Duration
-  public var numWorkPeriods: Int
+  public var numWorkPeriodsPerSession: Int
 
   public init(work: Duration, shortBreak: Duration, longBreak: Duration, repeating: Int) {
     self.work = work
     self.shortBreak = shortBreak
     self.longBreak = longBreak
-    numWorkPeriods = Int(max(0, repeating) + 1)
+    numWorkPeriodsPerSession = Int(max(0, repeating) + 1)
   }
 }
 
@@ -24,8 +24,8 @@ public extension WorkPattern {
 
 public extension WorkPattern {
   var sessionTickCount: TickCount {
-    max(0, numWorkPeriods) * work.tickCount
-      + max(0, numWorkPeriods - 1) * shortBreak.tickCount
+    max(0, numWorkPeriodsPerSession) * work.tickCount
+      + max(0, numWorkPeriodsPerSession - 1) * shortBreak.tickCount
       + longBreak.tickCount
   }
 
@@ -36,7 +36,7 @@ public extension WorkPattern {
     let final = zip([.work, .longBreak], [work, longBreak].map(\.tickRange))
       .map(Period.init)
 
-    let sessionPeriods = Array((Array(repeating: initial, count: numWorkPeriods - 1)
+    let sessionPeriods = Array((Array(repeating: initial, count: numWorkPeriodsPerSession - 1)
         + [final]).joined())
 
     return sessionPeriods

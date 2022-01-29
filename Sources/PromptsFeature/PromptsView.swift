@@ -44,6 +44,7 @@ public final class PromptsView: UIButton {
       case startBreak
       case startWorkPeriod
       case startSchedule
+      case changeSchedule
 
       case restartBreak
       case restartWorkPeriod
